@@ -107,8 +107,14 @@ champs_onboarding:
 | GET | `/onboarding/available?route=app_x` | Tours da página para o menu de ajuda |
 
 No `next`, `step` é o passo em que o usuário estava ao clicar. No último passo, `next` conclui o tour.
-Erros de regra voltam como JSON `{error}` em português (404 tour inexistente, 403 sem acesso,
-422 ação/passo/corpo inválido, 409 tour não iniciado).
+Erros de regra voltam como JSON `{error}` em português (401 sem login, 404 tour inexistente,
+403 sem acesso, 422 ação/passo/corpo inválido, 409 tour não iniciado).
+
+- **Sem login** os endpoints respondem 401 em JSON (não redirecionam). Se o `access_control` do
+  projeto exigir login em `/onboarding`, o firewall redireciona antes.
+- **CSRF:** o `POST /progress` exige o cabeçalho `X-Champs-Ajax` (o mesmo do AjaxForm do
+  champs-frontend) e recusa `Sec-Fetch-Site: cross-site` (403). Outro site não consegue enviar
+  cabeçalho customizado sem preflight CORS.
 
 As rotas só existem pelo import acima. O `config/routes.yaml` padrão do Symfony 7.4
 (`resource: routing.controllers`) importaria todo controller com `#[Route]`, inclusive os do
@@ -238,15 +244,28 @@ php bin/console champs:onboarding:sync --async       # só enfileira
 
 `segment = null` nos dois primeiros = todos os segmentos.
 
-## Âncoras no HTML
+## Front (champs-frontend ≥ 1.8)
+
+O módulo `Onboarding.js` do `champs-core-js` já vem no `initCore()`. No layout das páginas logadas:
+
+```twig
+{# raiz: uma por página #}
+<div class="d-none" data-champs-onboarding
+     data-champs-onboarding-route="{{ app.request.attributes.get('_route') }}"
+     data-champs-onboarding-url="{{ path('champs_onboarding_tour')|slice(0, -5) }}"></div>
+
+{# botão de ajuda: reabre / lista os tours da página #}
+<button type="button" class="btn btn-link" data-champs-onboarding-help><i class="bi bi-question-circle"></i></button>
+```
+
+Âncoras dos passos (o valor é o campo `anchor` do `TourStep`):
 
 ```html
 <button data-champs-tour="btn-importar">Importar</button>
 ```
 
-O valor do atributo é o campo `anchor` do `TourStep`.
+Textos traduzidos, atributos e eventos: ver o README do `champs-core-js` (seção Onboarding).
 
 ## Próximas etapas
 
 - CRUD de tours e passos + telas do dashboard (Twig, `@ChampsOnboarding`)
-- Módulo `Onboarding.js` no `champs-core-js`

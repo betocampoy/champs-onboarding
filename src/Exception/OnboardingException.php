@@ -15,6 +15,16 @@ final class OnboardingException extends \RuntimeException
         parent::__construct($message);
     }
 
+    public static function unauthenticated(): self
+    {
+        return new self('Faça login para continuar.', 401);
+    }
+
+    public static function crossSiteRequest(): self
+    {
+        return new self('Requisição recusada: envie pelo próprio sistema (cabeçalho X-Champs-Ajax).', 403);
+    }
+
     public static function tourNotFound(string $slug): self
     {
         return new self(sprintf('Tour "%s" não encontrado ou inativo.', $slug), 404);
