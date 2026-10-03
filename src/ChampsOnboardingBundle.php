@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BetoCampoy\Champs\Onboarding;
 
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
+use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
@@ -37,6 +38,14 @@ final class ChampsOnboardingBundle extends AbstractBundle
     public function getPath(): string
     {
         return \dirname(__DIR__);
+    }
+
+    public function build(ContainerBuilder $container): void
+    {
+        parent::build($container);
+
+        // Roda antes do RoutingControllerPass (prioridade 0).
+        $container->addCompilerPass(new DependencyInjection\ExcludeFromRoutingControllersPass(), PassConfig::TYPE_BEFORE_OPTIMIZATION, 10);
     }
 
     public function configure(DefinitionConfigurator $definition): void
