@@ -8,6 +8,7 @@ use BetoCampoy\Champs\Onboarding\Entity\Tour;
 use BetoCampoy\Champs\Onboarding\Enum\ProgressStatus;
 use BetoCampoy\Champs\Onboarding\Repository\TourProgressRepository;
 use BetoCampoy\Champs\Onboarding\Repository\TourRepository;
+use BetoCampoy\Champs\Onboarding\Segment\UserSegmentResolverInterface;
 
 /**
  * Números do dashboard. Calcula em PHP a partir das linhas de progresso,
@@ -21,30 +22,64 @@ final class OnboardingStats
     public function __construct(
         private readonly TourRepository $tours,
         private readonly TourProgressRepository $progress,
+        private readonly UserSegmentResolverInterface $segments,
     ) {
     }
 
-    /** @return list<array> um resumo por tour */
-    public function overview(): array
+    /**
+     * Um resumo por tour. $segment filtra (ex.: só um tenant); null = todos.
+     *
+     * @return list<array>
+     */
+    public function overview(?string $segment = null): array
     {
         return array_map(
-            fn (Tour $tour) => ['tour' => $tour, ...$this->summarize($this->normalize($this->progress->findStatsRows($tour)), $tour)],
+            fn (Tour $tour) => ['tour' => $tour, ...$this->summarize($this->normalize($this->progress->findStatsRows($tour, $segment)), $tour)],
             $this->tours->findAllWithSteps(),
         );
     }
 
-    /** Detalhe de um tour: resumo + funil + atividade recente + quem não abriu. */
-    public function forTour(Tour $tour): array
+    /** Detalhe de um tour: resumo + funil + atividade recente + quem não abriu. $segment filtra. */
+    public function forTour(Tour $tour, ?string $segment = null): array
     {
-        $rows = $this->normalize($this->progress->findStatsRows($tour));
+        $rows = $this->normalize($this->progress->findStatsRows($tour, $segment));
 
         return [
             'tour' => $tour,
+            'segment' => $segment,
             ...$this->summarize($rows, $tour),
             'funnel' => $this->funnel($tour, $rows),
-            'recent' => $this->progress->findRecent($tour),
-            'notStartedList' => $tour->isMonitored() ? $this->progress->findNotStarted($tour) : [],
+            'recent' => $this->progress->findRecent($tour, segment: $segment),
+            'notStartedList' => $tour->isMonitored() ? $this->progress->findNotStarted($tour, segment: $segment) : [],
         ];
+    }
+
+    /**
+     * Resumo de um tour agrupado por segmento (ex.: um por tenant), do maior para o menor.
+     * Linhas sem segmento ficam no grupo segment = null.
+     *
+     * @return list<array>
+     */
+    public function bySegment(Tour $tour): array
+    {
+        $groups = [];
+        foreach ($this->normalize($this->progress->findStatsRows($tour)) as $row) {
+            $groups[$row['segment'] ?? ''][] = $row;
+        }
+
+        $result = [];
+        foreach ($groups as $segment => $rows) {
+            $segment = $segment === '' ? null : (string) $segment;
+            $result[] = [
+                'segment' => $segment,
+                'label' => $segment === null ? null : $this->segments->label($segment),
+                ...$this->summarize($rows, $tour),
+            ];
+        }
+
+        usort($result, static fn (array $a, array $b) => $b['total'] <=> $a['total']);
+
+        return $result;
     }
 
     private function summarize(array $rows, Tour $tour): array
@@ -134,6 +169,7 @@ final class OnboardingStats
             'views' => (int) $r['views'],
             'startedAt' => $r['startedAt'],
             'finishedAt' => $r['finishedAt'],
+            'segment' => $r['segment'],
         ], $rows);
     }
 }

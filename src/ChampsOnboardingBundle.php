@@ -25,8 +25,12 @@ use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
  *       monitoring:
  *           user_class: App\Entity\User
  *           identifier_property: email
- *           roles_property: roles
+ *           watch_fields: [roles]
  *           batch_size: 500
+ *
+ * Quem pode ver cada tour: Eligibility\TourEligibilityCheckerInterface.
+ * Segmento das estatísticas: Segment\UserSegmentResolverInterface.
+ * Os dois têm implementação padrão e podem ser trocados por alias no projeto.
  */
 final class ChampsOnboardingBundle extends AbstractBundle
 {
@@ -91,9 +95,10 @@ final class ChampsOnboardingBundle extends AbstractBundle
                             ->defaultNull()
                             ->info('Propriedade que gera o getUserIdentifier() (ex.: email). Permite acompanhar troca de e-mail.')
                         ->end()
-                        ->scalarNode('roles_property')
-                            ->defaultValue('roles')
-                            ->info('Propriedade das roles; mudanças nela ressincronizam o usuário.')
+                        ->arrayNode('watch_fields')
+                            ->scalarPrototype()->end()
+                            ->defaultValue(['roles'])
+                            ->info('Campos, associações ou coleções do User que mudam quem ele pode ver ou o segmento dele; mudança em qualquer um ressincroniza o usuário.')
                         ->end()
                         ->integerNode('batch_size')
                             ->defaultValue(500)
@@ -115,7 +120,7 @@ final class ChampsOnboardingBundle extends AbstractBundle
             ->set('champs_onboarding.mandatory.cache_seconds', $config['mandatory']['cache_seconds'])
             ->set('champs_onboarding.monitoring.user_class', $config['monitoring']['user_class'])
             ->set('champs_onboarding.monitoring.identifier_property', $config['monitoring']['identifier_property'])
-            ->set('champs_onboarding.monitoring.roles_property', $config['monitoring']['roles_property'])
+            ->set('champs_onboarding.monitoring.watch_fields', $config['monitoring']['watch_fields'])
             ->set('champs_onboarding.monitoring.batch_size', $config['monitoring']['batch_size']);
 
         $container->import('../config/services.php');

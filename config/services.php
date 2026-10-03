@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
+use BetoCampoy\Champs\Onboarding\Eligibility\AuthorizationEligibilityChecker;
+use BetoCampoy\Champs\Onboarding\Eligibility\TourEligibilityCheckerInterface;
 use BetoCampoy\Champs\Onboarding\EventListener\UserLifecycleListener;
 use BetoCampoy\Champs\Onboarding\EventSubscriber\MandatoryOnboardingSubscriber;
 use BetoCampoy\Champs\Onboarding\Monitoring\MonitoredUserProvider;
+use BetoCampoy\Champs\Onboarding\Segment\NullSegmentResolver;
+use BetoCampoy\Champs\Onboarding\Segment\UserSegmentResolverInterface;
 
 return static function (ContainerConfigurator $container): void {
     $services = $container->services()
@@ -17,6 +21,7 @@ return static function (ContainerConfigurator $container): void {
     $services->load('BetoCampoy\\Champs\\Onboarding\\', '../src/')
         ->exclude([
             '../src/ChampsOnboardingBundle.php',
+            '../src/DependencyInjection/',
             '../src/Entity/',
             '../src/Enum/',
             '../src/Exception/',
@@ -38,5 +43,10 @@ return static function (ContainerConfigurator $container): void {
 
     $services->set(UserLifecycleListener::class)
         ->arg('$identifierProperty', param('champs_onboarding.monitoring.identifier_property'))
-        ->arg('$rolesProperty', param('champs_onboarding.monitoring.roles_property'));
+        ->arg('$watchFields', param('champs_onboarding.monitoring.watch_fields'));
+
+    // Pontos de extensão: o projeto troca a implementação apontando o alias
+    // para a própria classe no config/services.yaml dele.
+    $services->alias(TourEligibilityCheckerInterface::class, AuthorizationEligibilityChecker::class);
+    $services->alias(UserSegmentResolverInterface::class, NullSegmentResolver::class);
 };

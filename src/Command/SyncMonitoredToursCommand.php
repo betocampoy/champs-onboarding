@@ -62,15 +62,15 @@ final class SyncMonitoredToursCommand extends Command
         foreach ($tours as $tour) {
             if ($input->getOption('async')) {
                 $this->bus->dispatch(new SyncMonitoredTour((int) $tour->getId()));
-                $rows[] = [$tour->getSlug(), 'enfileirado', '-'];
+                $rows[] = [$tour->getSlug(), 'enfileirado', '-', '-'];
                 continue;
             }
 
             $result = $this->monitoring->syncTour($tour);
-            $rows[] = [$tour->getSlug(), $result['added'], $result['removed']];
+            $rows[] = [$tour->getSlug(), $result['added'], $result['removed'], $result['segmentsFixed']];
         }
 
-        $io->table(['Tour', 'Adicionados', 'Removidos'], $rows);
+        $io->table(['Tour', 'Adicionados', 'Removidos', 'Segmentos corrigidos'], $rows);
 
         return Command::SUCCESS;
     }

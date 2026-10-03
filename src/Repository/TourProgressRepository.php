@@ -11,6 +11,7 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Types\Types;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -89,44 +90,51 @@ class TourProgressRepository extends ServiceEntityRepository
     /**
      * Linhas brutas de progresso de um tour, usadas pelas estatísticas.
      *
-     * @return list<array{status: ProgressStatus, currentStep: int, views: int, startedAt: ?\DateTimeImmutable, finishedAt: ?\DateTimeImmutable}>
+     * $segment null = todos os segmentos.
+     *
+     * @return list<array{status: ProgressStatus, currentStep: int, views: int, startedAt: ?\DateTimeImmutable, finishedAt: ?\DateTimeImmutable, segment: ?string}>
      */
-    public function findStatsRows(Tour $tour): array
+    public function findStatsRows(Tour $tour, ?string $segment = null): array
     {
-        return $this->createQueryBuilder('p')
-            ->select('p.status', 'p.currentStep', 'p.views', 'p.startedAt', 'p.finishedAt')
+        $qb = $this->createQueryBuilder('p')
+            ->select('p.status', 'p.currentStep', 'p.views', 'p.startedAt', 'p.finishedAt', 'p.segment')
             ->andWhere('p.tour = :tour')
-            ->setParameter('tour', $tour)
-            ->getQuery()
-            ->getArrayResult();
+            ->setParameter('tour', $tour);
+
+        return $this->filterSegment($qb, $segment)->getQuery()->getArrayResult();
     }
 
     /** Últimas atividades no tour (ignora quem ainda não abriu). @return list<TourProgress> */
-    public function findRecent(Tour $tour, int $limit = 20): array
+    public function findRecent(Tour $tour, int $limit = 20, ?string $segment = null): array
     {
-        return $this->createQueryBuilder('p')
+        $qb = $this->createQueryBuilder('p')
             ->andWhere('p.tour = :tour')
             ->andWhere('p.status <> :pending')
             ->setParameter('tour', $tour)
             ->setParameter('pending', ProgressStatus::PENDING)
             ->orderBy('p.lastSeenAt', 'DESC')
-            ->setMaxResults($limit)
-            ->getQuery()
-            ->getResult();
+            ->setMaxResults($limit);
+
+        return $this->filterSegment($qb, $segment)->getQuery()->getResult();
     }
 
     /** Quem ainda não abriu um tour monitorado (mais antigos primeiro). @return list<TourProgress> */
-    public function findNotStarted(Tour $tour, int $limit = 50): array
+    public function findNotStarted(Tour $tour, int $limit = 50, ?string $segment = null): array
     {
-        return $this->createQueryBuilder('p')
+        $qb = $this->createQueryBuilder('p')
             ->andWhere('p.tour = :tour')
             ->andWhere('p.status = :pending')
             ->setParameter('tour', $tour)
             ->setParameter('pending', ProgressStatus::PENDING)
             ->orderBy('p.createdAt', 'ASC')
-            ->setMaxResults($limit)
-            ->getQuery()
-            ->getResult();
+            ->setMaxResults($limit);
+
+        return $this->filterSegment($qb, $segment)->getQuery()->getResult();
+    }
+
+    private function filterSegment(QueryBuilder $qb, ?string $segment): QueryBuilder
+    {
+        return $segment === null ? $qb : $qb->andWhere('p.segment = :segment')->setParameter('segment', $segment);
     }
 
     public function save(TourProgress $progress, bool $flush = true): void
@@ -140,15 +148,15 @@ class TourProgressRepository extends ServiceEntityRepository
 
     // ---------------------------------------------------------------- DBAL (monitoramento)
 
-    /** @return array<string, string> [userIdentifier => status] */
-    public function fetchStatusesForTour(int $tourId): array
+    /** @return array<string, array{status: string, segment: ?string}> [userIdentifier => linha] */
+    public function fetchRowsForTour(int $tourId): array
     {
         $sql = sprintf(
-            'SELECT %s, %s FROM %s WHERE %s = ?',
-            $this->col('userIdentifier'), $this->col('status'), $this->table(), $this->tourCol(),
+            'SELECT %s, %s AS status, %s AS segment FROM %s WHERE %s = ?',
+            $this->col('userIdentifier'), $this->col('status'), $this->col('segment'), $this->table(), $this->tourCol(),
         );
 
-        return $this->conn()->fetchAllKeyValue($sql, [$tourId]);
+        return $this->conn()->fetchAllAssociativeIndexed($sql, [$tourId]);
     }
 
     /** @return array<int, string> [tourId => status] */
@@ -165,21 +173,22 @@ class TourProgressRepository extends ServiceEntityRepository
     /**
      * Cria linhas PENDING. Quem já tem linha deve ser filtrado antes.
      *
-     * @param list<string> $userIdentifiers
+     * @param array<string, ?string> $segmentsByUser [userIdentifier => segmento]
      */
-    public function insertPending(int $tourId, array $userIdentifiers): int
+    public function insertPending(int $tourId, array $segmentsByUser): int
     {
-        if ($userIdentifiers === []) {
+        if ($segmentsByUser === []) {
             return 0;
         }
 
         $conn = $this->conn();
         $now = new \DateTimeImmutable();
 
-        $conn->transactional(function (Connection $conn) use ($tourId, $userIdentifiers, $now): void {
-            foreach ($userIdentifiers as $identifier) {
+        $conn->transactional(function (Connection $conn) use ($tourId, $segmentsByUser, $now): void {
+            foreach ($segmentsByUser as $identifier => $segment) {
                 $conn->insert($this->table(), [
-                    $this->col('userIdentifier') => $identifier,
+                    $this->col('userIdentifier') => (string) $identifier,
+                    $this->col('segment') => $segment,
                     $this->tourCol() => $tourId,
                     $this->col('currentStep') => 0,
                     $this->col('status') => ProgressStatus::PENDING->value,
@@ -191,7 +200,42 @@ class TourProgressRepository extends ServiceEntityRepository
             }
         });
 
-        return count($userIdentifiers);
+        return count($segmentsByUser);
+    }
+
+    /**
+     * Corrige o segmento das linhas de um tour.
+     *
+     * @param array<string, ?string> $segmentsByUser [userIdentifier => segmento]
+     */
+    public function updateSegments(int $tourId, array $segmentsByUser): int
+    {
+        if ($segmentsByUser === []) {
+            return 0;
+        }
+
+        $sql = sprintf(
+            'UPDATE %s SET %s = ? WHERE %s = ? AND %s = ?',
+            $this->table(), $this->col('segment'), $this->tourCol(), $this->col('userIdentifier'),
+        );
+
+        return $this->conn()->transactional(function (Connection $conn) use ($sql, $tourId, $segmentsByUser): int {
+            $updated = 0;
+            foreach ($segmentsByUser as $identifier => $segment) {
+                $updated += $conn->executeStatement($sql, [$segment, $tourId, (string) $identifier]);
+            }
+
+            return $updated;
+        });
+    }
+
+    /** Usuário mudou de segmento (ex.: de tenant): todas as linhas dele acompanham. */
+    public function updateSegmentForUser(string $userIdentifier, ?string $segment): int
+    {
+        return $this->conn()->executeStatement(
+            sprintf('UPDATE %s SET %s = ? WHERE %s = ?', $this->table(), $this->col('segment'), $this->col('userIdentifier')),
+            [$segment, $userIdentifier],
+        );
     }
 
     /**

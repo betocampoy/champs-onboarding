@@ -25,7 +25,7 @@ use Symfony\Component\Messenger\MessageBusInterface;
 final class TourMonitoringListener
 {
     /** Campos do Tour que mudam quem deve ter linha PENDING. */
-    private const WATCHED = ['monitored', 'active', 'requiredRole'];
+    private const WATCHED = ['monitored', 'active', 'requiredAttribute'];
 
     /** @var array<int, true> */
     private array $queue = [];

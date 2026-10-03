@@ -22,6 +22,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Table(name: 'champs_onboarding_progress')]
 #[ORM\UniqueConstraint(name: 'uniq_champs_onboarding_progress_user_tour', columns: ['user_identifier', 'tour_id'])]
 #[ORM\Index(name: 'idx_champs_onboarding_progress_status', columns: ['tour_id', 'status'])]
+#[ORM\Index(name: 'idx_champs_onboarding_progress_segment', columns: ['tour_id', 'segment'])]
 class TourProgress
 {
     #[ORM\Id]
@@ -35,6 +36,10 @@ class TourProgress
     #[ORM\ManyToOne(targetEntity: Tour::class)]
     #[ORM\JoinColumn(name: 'tour_id', nullable: false, onDelete: 'CASCADE')]
     private Tour $tour;
+
+    /** Segmento do usuário para as estatísticas (UserSegmentResolverInterface), ex.: "tenant:42". */
+    #[ORM\Column(length: 100, nullable: true)]
+    private ?string $segment = null;
 
     /** Posição do passo atual (ou do último visto, se encerrado). */
     #[ORM\Column(name: 'current_step', type: Types::SMALLINT)]
@@ -137,6 +142,8 @@ class TourProgress
     public function getId(): ?int { return $this->id; }
     public function getUserIdentifier(): string { return $this->userIdentifier; }
     public function getTour(): Tour { return $this->tour; }
+    public function getSegment(): ?string { return $this->segment; }
+    public function setSegment(?string $segment): static { $this->segment = $segment; return $this; }
     public function getCurrentStep(): int { return $this->currentStep; }
     public function getStatus(): ProgressStatus { return $this->status; }
     public function getViews(): int { return $this->views; }

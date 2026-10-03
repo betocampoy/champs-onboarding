@@ -68,7 +68,7 @@ final class OnboardingController extends AbstractController
     #[Route('/available', name: 'champs_onboarding_available', methods: ['GET'])]
     public function available(Request $request): JsonResponse
     {
-        return $this->json(['tours' => $this->manager->listAvailable((string) $request->query->get('route', ''))]);
+        return $this->json(['tours' => $this->manager->listAvailable($this->getUser(), (string) $request->query->get('route', ''))]);
     }
 
     private function handle(callable $action): JsonResponse

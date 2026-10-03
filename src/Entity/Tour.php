@@ -40,9 +40,14 @@ class Tour
     #[ORM\Column(name: 'trigger_type', length: 30, enumType: TourTrigger::class)]
     private TourTrigger $trigger = TourTrigger::FIRST_ACCESS;
 
-    /** Role exigida para ver o tour (null = qualquer usuário logado). */
-    #[ORM\Column(length: 100, nullable: true)]
-    private ?string $requiredRole = null;
+    /**
+     * Atributo de segurança exigido para ver o tour (null = qualquer usuário logado).
+     * Avaliado pelo TourEligibilityCheckerInterface; no padrão, via isGrantedForUser():
+     * uma role (ROLE_X, respeita a hierarquia) ou qualquer atributo que um voter
+     * do projeto entenda (ex.: "modulo:financeiro"). O Tour vai como subject.
+     */
+    #[ORM\Column(name: 'required_attribute', length: 150, nullable: true)]
+    private ?string $requiredAttribute = null;
 
     #[ORM\Column]
     private bool $active = false;
@@ -113,8 +118,8 @@ class Tour
     public function getTrigger(): TourTrigger { return $this->trigger; }
     public function setTrigger(TourTrigger $trigger): static { $this->trigger = $trigger; return $this; }
 
-    public function getRequiredRole(): ?string { return $this->requiredRole; }
-    public function setRequiredRole(?string $requiredRole): static { $this->requiredRole = $requiredRole; return $this; }
+    public function getRequiredAttribute(): ?string { return $this->requiredAttribute; }
+    public function setRequiredAttribute(?string $requiredAttribute): static { $this->requiredAttribute = $requiredAttribute; return $this; }
 
     public function isActive(): bool { return $this->active; }
     public function setActive(bool $active): static { $this->active = $active; return $this; }

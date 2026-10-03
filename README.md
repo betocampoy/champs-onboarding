@@ -74,6 +74,8 @@ champs_onboarding:
     admin_role: ROLE_ADMIN
 ```
 
+Exige `betocampoy/champs-frontend` `^1.7`.
+
 ## Banco de dados
 
 O mapeamento Doctrine é registrado pelo próprio bundle. Basta gerar e rodar a migration:
@@ -82,6 +84,10 @@ O mapeamento Doctrine é registrado pelo próprio bundle. Basta gerar e rodar a 
 php bin/console doctrine:migrations:diff
 php bin/console doctrine:migrations:migrate
 ```
+
+**Leia a migration gerada.** Ela deve criar só `champs_onboarding_tour`, `champs_onboarding_step`
+e `champs_onboarding_progress`. Se o banco do projeto já tiver drift em relação ao mapeamento,
+o `diff` arrasta junto `ALTER`/`DROP` de tabelas do projeto: nesse caso, limpe à mão.
 
 ## Rotas
 
@@ -101,6 +107,40 @@ champs_onboarding:
 | GET | `/onboarding/available?route=app_x` | Tours da página para o menu de ajuda |
 
 No `next`, `step` é o passo em que o usuário estava ao clicar. No último passo, `next` conclui o tour.
+Erros de regra voltam como JSON `{error}` em português (404 tour inexistente, 403 sem acesso,
+422 ação/passo/corpo inválido, 409 tour não iniciado).
+
+As rotas só existem pelo import acima. O `config/routes.yaml` padrão do Symfony 7.4
+(`resource: routing.controllers`) importaria todo controller com `#[Route]`, inclusive os do
+bundle e sem prefixo; o `ExcludeFromRoutingControllersPass` tira os controllers do bundle dessa descoberta.
+
+## Quem vê cada tour (elegibilidade)
+
+`Tour::requiredAttribute` é um atributo de segurança (null = qualquer usuário logado). A regra
+fica num único serviço, `TourEligibilityCheckerInterface`, usado tanto nos endpoints quanto
+no monitoramento (worker/comando, sem sessão).
+
+O padrão (`AuthorizationEligibilityChecker`) chama `isGrantedForUser($user, $atributo, $tour)`:
+
+- `ROLE_X` funciona sem configuração e respeita a `role_hierarchy`
+- qualquer outro atributo é respondido pelos voters do projeto (o `Tour` vai como subject).
+  Ex.: `perm:fatura.listar`, `modulo:financeiro`. Os voters não podem depender da sessão.
+
+Para outra regra (ex.: excluir usuários desativados), implemente a interface no projeto
+(pode receber o `AuthorizationEligibilityChecker` e complementar) e aponte o alias:
+
+```php
+#[AsAlias(TourEligibilityCheckerInterface::class)]
+final class MinhaRegra implements TourEligibilityCheckerInterface { /* ... */ }
+```
+
+## Segmento (estatísticas por tenant, unidade, plano...)
+
+Os tours são globais. Para filtrar e agrupar as estatísticas, implemente
+`UserSegmentResolverInterface` (`resolve($user): ?string` e `label($segment): string`) e aponte
+o alias do mesmo jeito. O segmento é gravado em `champs_onboarding_progress.segment`:
+quando o usuário usa o tour, quando muda um dos `watch_fields` e em cada `champs:onboarding:sync`
+(que também corrige segmentos desatualizados). Sem implementação, fica tudo sem segmento.
 
 ## Tour obrigatório
 
@@ -134,18 +174,26 @@ champs_onboarding:
     monitoring:
         user_class: App\Entity\User
         identifier_property: email   # propriedade por trás do getUserIdentifier()
-        roles_property: roles
+        watch_fields: [roles]        # o que muda a elegibilidade ou o segmento
         batch_size: 500
 ```
 
 Sem `user_class`, o monitoramento fica desligado e o resto do bundle funciona normalmente.
 
-**Elegível** = tour sem `requiredRole`, ou role alcançável pela hierarquia
-(`ROLE_ADMIN` herda os tours de `ROLE_USER`).
+**Elegível** = o `TourEligibilityCheckerInterface` diz que sim (ver acima).
+
+**`watch_fields`**: campos, associações to-one ou coleções (ManyToMany/OneToMany) do User.
+Mudança em qualquer um ressincroniza o usuário. Inclua tudo de que a elegibilidade e o segmento
+dependem (ex.: `[tenant, authRoles, status]`).
 
 **Carga inicial:** ao salvar um tour monitorado (ou mudar `monitored`, `active` ou
-`requiredRole`), o `TourMonitoringListener` despacha `SyncMonitoredTour` no Messenger.
-Roteie para um transport assíncrono:
+`requiredAttribute`), o `TourMonitoringListener` despacha `SyncMonitoredTour` no Messenger.
+
+**Mudanças fora do User** (ex.: o tenant contratou um módulo): despache
+`SyncMonitoredUsers($segmento)` para ressincronizar os usuários daquele segmento
+(ou `null` para todos).
+
+Roteie as duas mensagens para um transport assíncrono:
 
 ```yaml
 # config/packages/messenger.yaml
@@ -153,6 +201,7 @@ framework:
     messenger:
         routing:
             BetoCampoy\Champs\Onboarding\Message\SyncMonitoredTour: async
+            BetoCampoy\Champs\Onboarding\Message\SyncMonitoredUsers: async
 ```
 
 Sem roteamento, a mensagem é processada na hora (síncrona).
@@ -162,11 +211,11 @@ Sem roteamento, a mensagem é processada na hora (síncrona).
 | Evento | O que acontece |
 |---|---|
 | Usuário criado | Cria `pending` nos tours monitorados que ele pode ver |
-| Roles alteradas | Cria `pending` nos que passou a ver; remove `pending` dos que deixou de ver |
+| Algum `watch_fields` alterado | Cria `pending` nos que passou a ver, remove `pending` dos que deixou de ver e atualiza o segmento |
 | Identifier alterado (ex.: e-mail) | Renomeia as linhas: o progresso acompanha o usuário |
 | Usuário excluído | Remove todas as linhas dele |
 
-Histórico de quem já abriu o tour nunca é apagado por mudança de role.
+Histórico de quem já abriu o tour nunca é apagado por mudança de acesso.
 Uma falha no monitoramento só é registrada no log: nunca impede salvar o usuário.
 
 **Comando** (para ressincronizar ou depois de importar usuários direto no banco):
@@ -181,10 +230,13 @@ php bin/console champs:onboarding:sync --async       # só enfileira
 
 `OnboardingStats` entrega os dados do dashboard:
 
-- `overview()`: por tour — não iniciados, iniciados, em andamento, concluídos, pulados,
+- `overview(?segment)`: por tour — não iniciados, iniciados, em andamento, concluídos, pulados,
   taxa de conclusão (sobre quem abriu), cobertura (sobre todos os elegíveis, só em monitorados),
   tempo médio e reaberturas
-- `forTour($tour)`: o resumo acima + funil por passo + atividade recente + lista de quem não abriu
+- `forTour($tour, ?segment)`: o resumo acima + funil por passo + atividade recente + lista de quem não abriu
+- `bySegment($tour)`: o resumo do tour por segmento (com o `label`), do maior para o menor
+
+`segment = null` nos dois primeiros = todos os segmentos.
 
 ## Âncoras no HTML
 

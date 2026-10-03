@@ -4,15 +4,16 @@ declare(strict_types=1);
 
 namespace BetoCampoy\Champs\Onboarding\Manager;
 
+use BetoCampoy\Champs\Onboarding\Eligibility\TourEligibilityCheckerInterface;
 use BetoCampoy\Champs\Onboarding\Entity\Tour;
 use BetoCampoy\Champs\Onboarding\Entity\TourProgress;
 use BetoCampoy\Champs\Onboarding\Enum\TourTrigger;
 use BetoCampoy\Champs\Onboarding\Exception\OnboardingException;
 use BetoCampoy\Champs\Onboarding\Repository\TourProgressRepository;
 use BetoCampoy\Champs\Onboarding\Repository\TourRepository;
+use BetoCampoy\Champs\Onboarding\Segment\UserSegmentResolverInterface;
 use Symfony\Component\Routing\Exception\ExceptionInterface as RoutingException;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 
 /**
@@ -28,7 +29,8 @@ final class OnboardingManager
     public function __construct(
         private readonly TourRepository $tours,
         private readonly TourProgressRepository $progress,
-        private readonly AuthorizationCheckerInterface $auth,
+        private readonly TourEligibilityCheckerInterface $eligibility,
+        private readonly UserSegmentResolverInterface $segments,
         private readonly UrlGeneratorInterface $urls,
     ) {
     }
@@ -47,14 +49,14 @@ final class OnboardingManager
             $tour = $progress->getTour();
             $routes = $tour->getEffectiveRoutes();
 
-            if (($routes[$progress->getCurrentStep()] ?? null) === $route && $this->canSee($tour)) {
+            if (($routes[$progress->getCurrentStep()] ?? null) === $route && $this->canSee($user, $tour)) {
                 return $this->toPayload($tour, $progress);
             }
         }
 
         $candidates = array_values(array_filter(
             $this->tours->findAutoStartForRoute($route),
-            fn (Tour $t) => $t->countSteps() > 0 && $this->canSee($t),
+            fn (Tour $t) => $t->countSteps() > 0 && $this->canSee($user, $t),
         ));
         $seen = $this->progress->findForUserIndexedByTour($userId, $candidates);
 
@@ -68,7 +70,7 @@ final class OnboardingManager
             // Sem linha (tour não monitorado) ou PENDING (monitorado): começa agora.
             $progress ??= new TourProgress($userId, $tour, false);
             $progress->begin();
-            $this->progress->save($progress);
+            $this->save($user, $progress);
 
             return $this->toPayload($tour, $progress);
         }
@@ -79,7 +81,7 @@ final class OnboardingManager
     /** Abre (ou reabre do início) um tour pelo slug — botão "?". */
     public function startManually(UserInterface $user, string $slug): array
     {
-        $tour = $this->getVisibleTour($slug);
+        $tour = $this->getVisibleTour($user, $slug);
         $userId = $user->getUserIdentifier();
 
         $progress = $this->progress->findOneForUser($userId, $tour);
@@ -91,7 +93,7 @@ final class OnboardingManager
             $progress->restart();
         }
 
-        $this->progress->save($progress);
+        $this->save($user, $progress);
 
         return $this->toPayload($tour, $progress);
     }
@@ -103,7 +105,7 @@ final class OnboardingManager
      */
     public function recordProgress(UserInterface $user, string $slug, string $action, int $step): array
     {
-        $tour = $this->getVisibleTour($slug);
+        $tour = $this->getVisibleTour($user, $slug);
         $progress = $this->progress->findOneForUser($user->getUserIdentifier(), $tour)
             ?? throw OnboardingException::notStarted($slug);
 
@@ -123,7 +125,7 @@ final class OnboardingManager
             default => throw OnboardingException::invalidAction($action),
         };
 
-        $this->progress->save($progress);
+        $this->save($user, $progress);
 
         return [
             'status' => $progress->getStatus()->value,
@@ -136,11 +138,11 @@ final class OnboardingManager
      *
      * @return list<array{slug: string, name: string, description: ?string}>
      */
-    public function listAvailable(string $route): array
+    public function listAvailable(UserInterface $user, string $route): array
     {
         $result = [];
         foreach ($this->tours->findAvailableForRoute($route) as $tour) {
-            if ($this->canSee($tour)) {
+            if ($this->canSee($user, $tour)) {
                 $result[] = [
                     'slug' => $tour->getSlug(),
                     'name' => $tour->getName(),
@@ -160,7 +162,7 @@ final class OnboardingManager
     {
         $mandatory = array_values(array_filter(
             $this->tours->findMandatoryActive(),
-            fn (Tour $t) => $t->countSteps() > 0 && $this->canSee($t),
+            fn (Tour $t) => $t->countSteps() > 0 && $this->canSee($user, $t),
         ));
 
         $seen = $this->progress->findForUserIndexedByTour($user->getUserIdentifier(), $mandatory);
@@ -190,20 +192,28 @@ final class OnboardingManager
         return $tour->getEffectiveRoutes()[$progress->getCurrentStep()] ?? $tour->getStartRoute();
     }
 
-    private function getVisibleTour(string $slug): Tour
+    private function getVisibleTour(UserInterface $user, string $slug): Tour
     {
         $tour = $this->tours->findActiveBySlug($slug) ?? throw OnboardingException::tourNotFound($slug);
 
-        if (!$this->canSee($tour)) {
+        if (!$this->canSee($user, $tour)) {
             throw OnboardingException::accessDenied($slug);
         }
 
         return $tour;
     }
 
-    private function canSee(Tour $tour): bool
+    /** Mesma regra do monitoramento: TourEligibilityCheckerInterface. */
+    private function canSee(UserInterface $user, Tour $tour): bool
     {
-        return $tour->getRequiredRole() === null || $this->auth->isGranted($tour->getRequiredRole());
+        return $this->eligibility->isEligible($user, $tour);
+    }
+
+    /** Grava o progresso já com o segmento atual do usuário. */
+    private function save(UserInterface $user, TourProgress $progress): void
+    {
+        $progress->setSegment($this->segments->resolve($user));
+        $this->progress->save($progress);
     }
 
     /** Formato consumido pelo módulo Onboarding.js. */
