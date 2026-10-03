@@ -137,9 +137,11 @@ class Tour
     /** @return Collection<int, TourStep> */
     public function getSteps(): Collection { return $this->steps; }
 
+    /** Acrescenta o passo no fim do tour (posição = quantidade atual de passos). */
     public function addStep(TourStep $step): static
     {
         if (!$this->steps->contains($step)) {
+            $step->setPosition($this->steps->count());
             $this->steps->add($step);
             $step->setTour($this);
         }

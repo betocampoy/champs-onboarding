@@ -7,6 +7,7 @@ namespace BetoCampoy\Champs\Onboarding\Controller;
 use BetoCampoy\Champs\Onboarding\Exception\OnboardingException;
 use BetoCampoy\Champs\Onboarding\Manager\OnboardingManager;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Exception\JsonException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
@@ -47,14 +48,20 @@ final class OnboardingController extends AbstractController
     #[Route('/progress', name: 'champs_onboarding_progress', methods: ['POST'])]
     public function progress(Request $request): JsonResponse
     {
-        $data = $request->toArray();
+        return $this->handle(function () use ($request) {
+            try {
+                $data = $request->toArray();
+            } catch (JsonException) {
+                throw OnboardingException::invalidPayload();
+            }
 
-        return $this->handle(fn () => $this->manager->recordProgress(
-            $this->getUser(),
-            (string) ($data['tour'] ?? ''),
-            (string) ($data['action'] ?? ''),
-            (int) ($data['step'] ?? -1),
-        ));
+            return $this->manager->recordProgress(
+                $this->getUser(),
+                (string) ($data['tour'] ?? ''),
+                (string) ($data['action'] ?? ''),
+                (int) ($data['step'] ?? -1),
+            );
+        });
     }
 
     /** GET /onboarding/available?route=app_x → tours para o menu de ajuda. */

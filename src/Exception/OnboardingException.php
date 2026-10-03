@@ -40,6 +40,11 @@ final class OnboardingException extends \RuntimeException
         return new self(sprintf('Ação "%s" inválida. Use next, complete ou skip.', $action), 422);
     }
 
+    public static function invalidPayload(): self
+    {
+        return new self('Corpo da requisição inválido. Envie JSON com tour, step e action.', 422);
+    }
+
     public static function notStarted(string $slug): self
     {
         return new self(sprintf('O tour "%s" não foi iniciado.', $slug), 409);
