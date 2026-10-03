@@ -1,0 +1,29 @@
+{
+    "name": "betocampoy/champs-onboarding",
+    "description": "Onboarding guiado (tours de interface) para projetos Symfony, integrado ao champs-frontend.",
+    "type": "symfony-bundle",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Beto Campoy"
+        }
+    ],
+    "require": {
+        "php": ">=8.2",
+        "symfony/framework-bundle": "^7.4",
+        "symfony/security-bundle": "^7.4",
+        "symfony/twig-bundle": "^7.4",
+        "doctrine/orm": "^3.0",
+        "doctrine/doctrine-bundle": "^2.13",
+        "betocampoy/champs-frontend": "dev-main",
+        "symfony/messenger": "^7.4",
+        "symfony/console": "^7.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "BetoCampoy\\Champs\\Onboarding\\": "src/"
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
