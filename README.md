@@ -266,6 +266,32 @@ O módulo `Onboarding.js` do `champs-core-js` já vem no `initCore()`. No layout
 
 Textos traduzidos, atributos e eventos: ver o README do `champs-core-js` (seção Onboarding).
 
+## Cadastro de tours (admin)
+
+Telas em `/onboarding/admin/tours` (prefixo do import de rotas), só para `admin_role`:
+lista com busca e números de uso, cadastro do tour, passos (criar, editar, subir/descer, excluir)
+e **Testar tour** (modo teste do `Onboarding.js`: nada é gravado, funciona com tour inativo).
+
+```yaml
+champs_onboarding:
+    admin_role: ROLE_ADMIN
+    admin:
+        layout: admin/layout.html.twig        # precisa ter o bloco "content"
+        form_theme: '@ChampsFrontend/form/champs_theme.html.twig'
+        route_path_prefixes: [/app]           # telas oferecidas no select (vazio = todas)
+        anchor_paths: ['%kernel.project_dir%/templates']  # onde procurar data-champs-tour
+```
+
+- Só rotas GET sem parâmetro obrigatório aparecem como tela de tour (o front precisa gerar a URL).
+- As âncoras `data-champs-tour` já usadas nos templates são sugeridas no cadastro do passo;
+  âncora digitada que não existe em nenhum template aparece com aviso.
+- Telas e textos (`champs_onboarding.*.yaml`, pt_BR/en/es) podem ser sobrescritos pelo mecanismo
+  padrão do Symfony (`templates/bundles/ChampsOnboardingBundle/`, `translations/`).
+- **Testar tour** abre `?champs_onboarding_preview=<slug>` na tela do 1º passo. O tour é lido por
+  `/onboarding/admin/tours/preview/{slug}`, liberado para o admin e para um admin que esteja
+  personificando um usuário (`switch_user`): é o caminho para testar tours de telas que o admin
+  não acessa. A tela do tour mostra o link de teste para copiar.
+
 ## Próximas etapas
 
-- CRUD de tours e passos + telas do dashboard (Twig, `@ChampsOnboarding`)
+- Dashboard de estatísticas (`OnboardingStats`) nas telas do admin

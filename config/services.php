@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
+use BetoCampoy\Champs\Onboarding\Admin\AnchorCatalog;
+use BetoCampoy\Champs\Onboarding\Admin\RouteCatalog;
 use BetoCampoy\Champs\Onboarding\Eligibility\AuthorizationEligibilityChecker;
 use BetoCampoy\Champs\Onboarding\Eligibility\TourEligibilityCheckerInterface;
 use BetoCampoy\Champs\Onboarding\EventListener\UserLifecycleListener;
@@ -44,6 +46,12 @@ return static function (ContainerConfigurator $container): void {
     $services->set(UserLifecycleListener::class)
         ->arg('$identifierProperty', param('champs_onboarding.monitoring.identifier_property'))
         ->arg('$watchFields', param('champs_onboarding.monitoring.watch_fields'));
+
+    $services->set(RouteCatalog::class)
+        ->arg('$pathPrefixes', param('champs_onboarding.admin.route_path_prefixes'));
+
+    $services->set(AnchorCatalog::class)
+        ->arg('$paths', param('champs_onboarding.admin.anchor_paths'));
 
     // Pontos de extensão: o projeto troca a implementação apontando o alias
     // para a própria classe no config/services.yaml dele.

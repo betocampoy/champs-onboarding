@@ -10,11 +10,14 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: TourRepository::class)]
 #[ORM\Table(name: 'champs_onboarding_tour')]
 #[ORM\UniqueConstraint(name: 'uniq_champs_onboarding_tour_slug', columns: ['slug'])]
 #[ORM\HasLifecycleCallbacks]
+#[UniqueEntity(fields: ['slug'], message: 'champs_onboarding.tour.slug_unique')]
 class Tour
 {
     #[ORM\Id]
@@ -24,9 +27,14 @@ class Tour
 
     /** Identificador estável, usado no botão "?" e nos logs (ex.: "importacao-planilha"). */
     #[ORM\Column(length: 100)]
+    #[Assert\NotBlank]
+    #[Assert\Length(max: 100)]
+    #[Assert\Regex(pattern: '/^[a-z0-9]+(?:-[a-z0-9]+)*$/', message: 'champs_onboarding.tour.slug_format')]
     private string $slug;
 
     #[ORM\Column(length: 150)]
+    #[Assert\NotBlank]
+    #[Assert\Length(max: 150)]
     private string $name;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
@@ -34,6 +42,7 @@ class Tour
 
     /** Nome da rota Symfony onde o tour começa (ex.: "app_encomenda_index"). */
     #[ORM\Column(length: 150)]
+    #[Assert\NotBlank]
     private string $startRoute;
 
     /** Coluna "trigger_type": TRIGGER é palavra reservada no MySQL. */
@@ -113,7 +122,8 @@ class Tour
     public function setDescription(?string $description): static { $this->description = $description; return $this; }
 
     public function getStartRoute(): string { return $this->startRoute; }
-    public function setStartRoute(string $startRoute): static { $this->startRoute = $startRoute; return $this; }
+    /** Aceita null (select vazio no formulário) como ''; o NotBlank é que barra. */
+    public function setStartRoute(?string $startRoute): static { $this->startRoute = (string) $startRoute; return $this; }
 
     public function getTrigger(): TourTrigger { return $this->trigger; }
     public function setTrigger(TourTrigger $trigger): static { $this->trigger = $trigger; return $this; }
@@ -154,11 +164,48 @@ class Tour
         return $this;
     }
 
+    /** Remove o passo e renumera os seguintes (posições sempre 0..n-1). */
     public function removeStep(TourStep $step): static
     {
         $this->steps->removeElement($step);
+        $this->renumberSteps();
 
         return $this;
+    }
+
+    /** Troca o passo de lugar com o vizinho ($delta = -1 sobe, +1 desce). */
+    public function moveStep(TourStep $step, int $delta): static
+    {
+        $ordered = $this->orderedSteps();
+        $from = array_search($step, $ordered, true);
+        $to = $from === false ? false : $from + $delta;
+
+        if ($to === false || $to < 0 || $to >= count($ordered)) {
+            return $this;
+        }
+
+        [$ordered[$from], $ordered[$to]] = [$ordered[$to], $ordered[$from]];
+        foreach ($ordered as $position => $item) {
+            $item->setPosition($position);
+        }
+
+        return $this;
+    }
+
+    private function renumberSteps(): void
+    {
+        foreach ($this->orderedSteps() as $position => $item) {
+            $item->setPosition($position);
+        }
+    }
+
+    /** @return list<TourStep> */
+    private function orderedSteps(): array
+    {
+        $steps = $this->steps->toArray();
+        usort($steps, static fn (TourStep $a, TourStep $b) => $a->getPosition() <=> $b->getPosition());
+
+        return array_values($steps);
     }
 
     public function countSteps(): int
@@ -198,7 +245,7 @@ class Tour
         $routes = [];
         $current = $this->startRoute;
 
-        foreach ($this->steps as $step) {
+        foreach ($this->orderedSteps() as $step) {
             $current = $step->getRoute() ?? $current;
             $routes[$step->getPosition()] = $current;
         }

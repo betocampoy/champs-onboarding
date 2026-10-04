@@ -1,0 +1,3 @@
+champs_onboarding.tour.slug_format: 'Use só minúsculas, números e hífen (ex.: importacao-planilha).'
+champs_onboarding.tour.slug_unique: 'Já existe um tour com este identificador.'
+champs_onboarding.step.anchor_format: 'Use só letras, números, hífen, ponto, dois-pontos ou sublinhado.'

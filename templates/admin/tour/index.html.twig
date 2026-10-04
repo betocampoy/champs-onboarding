@@ -1,0 +1,71 @@
+{% extends champs_onboarding_layout %}
+{% trans_default_domain 'champs_onboarding' %}
+
+{% block title %}{{ 'admin.title'|trans }}{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="h4 m-0"><i class="bi bi-signpost-split"></i> {{ 'admin.title'|trans }}</h1>
+    <a href="{{ path('champs_onboarding_admin_tour_new') }}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg"></i> {{ 'admin.list.new'|trans }}
+    </a>
+</div>
+
+<form method="get" class="d-flex gap-2 mb-3" style="max-width: 520px;">
+    <input type="search" name="q" value="{{ q }}" class="form-control form-control-sm" placeholder="{{ 'admin.search'|trans }}">
+    <button type="submit" class="btn btn-sm btn-outline-primary">{{ 'admin.filter'|trans }}</button>
+    {% if q %}<a href="{{ path('champs_onboarding_admin_tour_index') }}" class="btn btn-sm btn-outline-secondary">{{ 'admin.clear'|trans }}</a>{% endif %}
+</form>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>{{ 'admin.list.name'|trans }}</th>
+                    <th>{{ 'admin.list.route'|trans }}</th>
+                    <th>{{ 'admin.list.trigger'|trans }}</th>
+                    <th class="text-center">{{ 'admin.list.steps'|trans }}</th>
+                    <th class="text-center">{{ 'admin.list.started'|trans }}</th>
+                    <th class="text-center" title="{{ 'admin.list.completion_help'|trans }}">{{ 'admin.list.completion'|trans }}</th>
+                    <th>{{ 'admin.list.status'|trans }}</th>
+                    <th class="text-end">{{ 'admin.list.actions'|trans }}</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for row in rows %}
+                {% set tour = row.tour %}
+                <tr>
+                    <td>
+                        <a href="{{ path('champs_onboarding_admin_tour_edit', {tour: tour.id}) }}" class="fw-semibold text-decoration-none">{{ tour.name }}</a>
+                        <div class="small text-body-secondary"><code>{{ tour.slug }}</code></div>
+                    </td>
+                    <td class="small"><code>{{ tour.startRoute }}</code></td>
+                    <td class="small">{{ ('admin.trigger.' ~ tour.trigger.value)|trans }}</td>
+                    <td class="text-center">{{ tour.countSteps }}</td>
+                    <td class="text-center">{{ row.started }}</td>
+                    <td class="text-center">{{ row.started > 0 ? row.completionRate ~ '%' : '—' }}</td>
+                    <td>
+                        <span class="badge {{ tour.active ? 'text-bg-success' : 'text-bg-secondary' }}">{{ (tour.active ? 'admin.list.active' : 'admin.list.inactive')|trans }}</span>
+                        {% if tour.mandatory %}<span class="badge text-bg-warning">{{ 'admin.list.mandatory'|trans }}</span>{% endif %}
+                        {% if tour.monitored %}<span class="badge text-bg-info">{{ 'admin.list.monitored'|trans }}</span>{% endif %}
+                    </td>
+                    <td class="text-end text-nowrap">
+                        <a href="{{ path('champs_onboarding_admin_tour_preview', {tour: tour.id}) }}" class="btn btn-sm btn-outline-secondary" title="{{ 'admin.tour.preview_help'|trans }}">
+                            <i class="bi bi-play-circle"></i>
+                        </a>
+                        <a href="{{ path('champs_onboarding_admin_tour_edit', {tour: tour.id}) }}" class="btn btn-sm btn-outline-primary">{{ 'admin.edit'|trans }}</a>
+                        <form action="{{ path('champs_onboarding_admin_tour_toggle', {tour: tour.id}) }}" method="post" class="d-inline">
+                            <input type="hidden" name="_token" value="{{ csrf_token('toggle_tour_' ~ tour.id) }}">
+                            <button type="submit" class="btn btn-sm btn-outline-secondary">{{ (tour.active ? 'admin.deactivate' : 'admin.activate')|trans }}</button>
+                        </form>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="8" class="text-body-secondary text-center py-4">{{ 'admin.list.empty'|trans }}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

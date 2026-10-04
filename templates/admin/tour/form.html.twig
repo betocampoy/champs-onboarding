@@ -1,0 +1,138 @@
+{% extends champs_onboarding_layout %}
+{% trans_default_domain 'champs_onboarding' %}
+{% form_theme form champs_onboarding_form_theme %}
+
+{% set title = (tour ? 'admin.tour.edit_title' : 'admin.tour.new_title')|trans %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+        <a href="{{ path('champs_onboarding_admin_tour_index') }}" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> {{ 'admin.title'|trans }}</a>
+        <h1 class="h4 m-0">{{ title }}{% if tour %}: {{ tour.name }}{% endif %}</h1>
+    </div>
+    {% if tour %}
+        <a href="{{ path('champs_onboarding_admin_tour_preview', {tour: tour.id}) }}" class="btn btn-sm btn-outline-primary" title="{{ 'admin.tour.preview_help'|trans }}">
+            <i class="bi bi-play-circle"></i> {{ 'admin.tour.preview'|trans }}
+        </a>
+    {% endif %}
+</div>
+
+<div class="row g-3">
+    <div class="{{ tour ? 'col-xl-5' : 'col-xl-7' }}">
+        {{ form_start(form) }}
+        {{ form_errors(form) }}
+
+        <div class="card mb-3">
+            <div class="card-header">{{ 'admin.tour.section_main'|trans }}</div>
+            <div class="card-body">
+                <div class="row">
+                    {{ form_row(form.name) }}
+                    {{ form_row(form.slug) }}
+                    {{ form_row(form.description) }}
+                    {{ form_row(form.startRoute) }}
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">{{ 'admin.tour.section_rules'|trans }}</div>
+            <div class="card-body">
+                <div class="row">
+                    {{ form_row(form.trigger) }}
+                    {{ form_row(form.publishedAt) }}
+                    {{ form_row(form.requiredAttribute) }}
+                    {{ form_row(form.priority) }}
+                    {{ form_row(form.active) }}
+                    {{ form_row(form.mandatory) }}
+                    {{ form_row(form.monitored) }}
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">{{ 'admin.save'|trans }}</button>
+        <a href="{{ path('champs_onboarding_admin_tour_index') }}" class="btn btn-link">{{ 'admin.cancel'|trans }}</a>
+        {{ form_end(form) }}
+
+        {% if tour %}
+            <form action="{{ path('champs_onboarding_admin_tour_delete', {tour: tour.id}) }}" method="post" class="mt-4"
+                  onsubmit="return confirm({{ 'admin.tour.delete_confirm'|trans|json_encode }});">
+                <input type="hidden" name="_token" value="{{ csrf_token('delete_tour_' ~ tour.id) }}">
+                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i> {{ 'admin.delete'|trans }}</button>
+            </form>
+        {% endif %}
+    </div>
+
+    {% if tour %}
+    <div class="col-xl-7">
+        {% if previewUrl %}
+        <div class="card mb-3">
+            <div class="card-body">
+                <label class="form-label small fw-semibold" for="champs-onboarding-preview-url"><i class="bi bi-play-circle"></i> {{ 'admin.tour.preview_link'|trans }}</label>
+                <input type="text" readonly class="form-control form-control-sm font-monospace" id="champs-onboarding-preview-url"
+                       value="{{ previewUrl }}" onclick="this.select()">
+                <div class="form-text">{{ 'admin.tour.preview_link_help'|trans }}</div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>{{ 'admin.step.section'|trans }}</span>
+                <a href="{{ path('champs_onboarding_admin_step_new', {tour: tour.id}) }}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-plus-lg"></i> {{ 'admin.step.new'|trans }}
+                </a>
+            </div>
+            {% if steps is empty %}
+                <div class="card-body text-body-secondary">{{ 'admin.step.empty'|trans }}</div>
+            {% else %}
+                <ul class="list-group list-group-flush">
+                {% for step in steps %}
+                    <li class="list-group-item d-flex gap-3 align-items-start">
+                        <span class="badge text-bg-light border mt-1">{{ loop.index }}</span>
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="fw-semibold">{{ step.title }}</div>
+                            <div class="small text-body-secondary text-truncate" style="max-width: 46ch;">{{ step.content }}</div>
+                            <div class="small mt-1">
+                                {% if step.anchor %}
+                                    <i class="bi bi-bullseye"></i> <code>{{ step.anchor }}</code>
+                                    {% if missingAnchors[step.id] is defined %}
+                                        <span class="text-warning" title="{{ 'admin.step.anchor_missing'|trans }}"><i class="bi bi-exclamation-triangle"></i></span>
+                                    {% endif %}
+                                {% else %}
+                                    <i class="bi bi-window"></i> {{ 'admin.step.no_anchor'|trans }}
+                                {% endif %}
+                                {% if step.route %}
+                                    · <i class="bi bi-box-arrow-right"></i> <code>{{ routes[step.position] }}</code>
+                                {% endif %}
+                                {% if step.advanceOnClick %} · <i class="bi bi-hand-index"></i>{% endif %}
+                                {% if step.helpUrl %} · <i class="bi bi-link-45deg"></i>{% endif %}
+                            </div>
+                        </div>
+                        <div class="d-flex gap-1 flex-shrink-0">
+                            {% set token = csrf_token('step_' ~ step.id) %}
+                            <form action="{{ path('champs_onboarding_admin_step_move', {step: step.id, direction: 'up'}) }}" method="post">
+                                <input type="hidden" name="_token" value="{{ token }}">
+                                <button class="btn btn-sm btn-outline-secondary" {{ loop.first ? 'disabled' }} title="{{ 'admin.step.move_up'|trans }}"><i class="bi bi-arrow-up"></i></button>
+                            </form>
+                            <form action="{{ path('champs_onboarding_admin_step_move', {step: step.id, direction: 'down'}) }}" method="post">
+                                <input type="hidden" name="_token" value="{{ token }}">
+                                <button class="btn btn-sm btn-outline-secondary" {{ loop.last ? 'disabled' }} title="{{ 'admin.step.move_down'|trans }}"><i class="bi bi-arrow-down"></i></button>
+                            </form>
+                            <a href="{{ path('champs_onboarding_admin_step_edit', {step: step.id}) }}" class="btn btn-sm btn-outline-primary" title="{{ 'admin.edit'|trans }}"><i class="bi bi-pencil"></i></a>
+                            <form action="{{ path('champs_onboarding_admin_step_delete', {step: step.id}) }}" method="post"
+                                  onsubmit="return confirm({{ 'admin.step.delete_confirm'|trans|json_encode }});">
+                                <input type="hidden" name="_token" value="{{ token }}">
+                                <button class="btn btn-sm btn-outline-danger" title="{{ 'admin.delete'|trans }}"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </div>
+                    </li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

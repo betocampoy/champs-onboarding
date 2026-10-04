@@ -216,13 +216,26 @@ final class OnboardingManager
         $this->progress->save($progress);
     }
 
+    /**
+     * Tour para o "Testar tour" do admin: mesmo formato, do passo 0, sem gravar
+     * progresso nem checar elegibilidade/ativo (dá para testar antes de ativar).
+     * Quem chama garante que é admin.
+     */
+    public function previewPayload(Tour $tour): array
+    {
+        return [...$this->toPayload($tour, null), 'preview' => true];
+    }
+
     /** Formato consumido pelo módulo Onboarding.js. */
-    private function toPayload(Tour $tour, TourProgress $progress): array
+    private function toPayload(Tour $tour, ?TourProgress $progress): array
     {
         $routes = $tour->getEffectiveRoutes();
         $steps = [];
 
-        foreach ($tour->getSteps() as $step) {
+        $ordered = $tour->getSteps()->toArray();
+        usort($ordered, static fn ($a, $b) => $a->getPosition() <=> $b->getPosition());
+
+        foreach ($ordered as $step) {
             $route = $routes[$step->getPosition()];
             $steps[] = [
                 ...$step->toArray(),
@@ -236,7 +249,7 @@ final class OnboardingManager
             'name' => $tour->getName(),
             'mandatory' => $tour->isMandatory(),
             'manual' => $tour->getTrigger() === TourTrigger::MANUAL,
-            'currentStep' => $progress->getCurrentStep(),
+            'currentStep' => $progress?->getCurrentStep() ?? 0,
             'steps' => $steps,
         ];
     }

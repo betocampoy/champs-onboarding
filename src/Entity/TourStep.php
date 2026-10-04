@@ -8,6 +8,7 @@ use BetoCampoy\Champs\Onboarding\Enum\StepPosition;
 use BetoCampoy\Champs\Onboarding\Repository\TourStepRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: TourStepRepository::class)]
 #[ORM\Table(name: 'champs_onboarding_step')]
@@ -32,13 +33,18 @@ class TourStep
      * Null = passo sem âncora (popover centralizado na tela, ex.: boas-vindas).
      */
     #[ORM\Column(length: 100, nullable: true)]
+    #[Assert\Length(max: 100)]
+    #[Assert\Regex(pattern: '/^[A-Za-z0-9_.:-]+$/', message: 'champs_onboarding.step.anchor_format')]
     private ?string $anchor = null;
 
     #[ORM\Column(length: 150)]
+    #[Assert\NotBlank]
+    #[Assert\Length(max: 150)]
     private string $title;
 
-    /** Texto do popover (aceita HTML simples). */
+    /** Texto do passo. O front exibe como texto (escapado); quebras de linha viram <br>. */
     #[ORM\Column(type: Types::TEXT)]
+    #[Assert\NotBlank]
     private string $content;
 
     #[ORM\Column(length: 10, enumType: StepPosition::class)]
@@ -53,9 +59,12 @@ class TourStep
 
     /** Link opcional de ajuda (vídeo, artigo da base de conhecimento etc.). */
     #[ORM\Column(length: 500, nullable: true)]
+    #[Assert\Length(max: 500)]
+    #[Assert\Url(requireTld: false)]
     private ?string $helpUrl = null;
 
     #[ORM\Column(length: 100, nullable: true)]
+    #[Assert\Length(max: 100)]
     private ?string $helpLabel = null;
 
     /** Se true, o usuário precisa clicar no elemento destacado para avançar. */

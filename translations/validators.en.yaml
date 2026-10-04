@@ -1,0 +1,3 @@
+champs_onboarding.tour.slug_format: 'Use only lowercase letters, numbers and hyphens (e.g.: spreadsheet-import).'
+champs_onboarding.tour.slug_unique: 'A tour with this identifier already exists.'
+champs_onboarding.step.anchor_format: 'Use only letters, numbers, hyphen, dot, colon or underscore.'

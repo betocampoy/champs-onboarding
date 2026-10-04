@@ -1,0 +1,62 @@
+{% extends champs_onboarding_layout %}
+{% trans_default_domain 'champs_onboarding' %}
+{% form_theme form champs_onboarding_form_theme %}
+
+{% set title = (step ? 'admin.step.edit_title' : 'admin.step.new_title')|trans %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{{ path('champs_onboarding_admin_tour_edit', {tour: tour.id}) }}" class="small text-decoration-none"><i class="bi bi-arrow-left"></i> {{ tour.name }}</a>
+    <h1 class="h4 m-0">{{ title }}</h1>
+</div>
+
+<div class="row g-3">
+    <div class="col-xl-7">
+        {{ form_start(form) }}
+        {{ form_errors(form) }}
+
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="row">
+                    {{ form_row(form.title) }}
+                    {{ form_row(form.content) }}
+                    {{ form_row(form.anchor) }}
+                    {{ form_row(form.placement) }}
+                    {{ form_row(form.route) }}
+                    {{ form_row(form.helpUrl) }}
+                    {{ form_row(form.helpLabel) }}
+                    {{ form_row(form.advanceOnClick) }}
+                </div>
+            </div>
+        </div>
+
+        <datalist id="champs-onboarding-anchors">
+            {% for anchor in anchors|keys %}<option value="{{ anchor }}"></option>{% endfor %}
+        </datalist>
+
+        <button type="submit" class="btn btn-primary">{{ 'admin.save'|trans }}</button>
+        <a href="{{ path('champs_onboarding_admin_tour_edit', {tour: tour.id}) }}" class="btn btn-link">{{ 'admin.cancel'|trans }}</a>
+        {{ form_end(form) }}
+    </div>
+
+    <div class="col-xl-5">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-bullseye"></i> {{ 'admin.step.anchors_known'|trans }}</div>
+            {% if anchors is empty %}
+                <div class="card-body small text-body-secondary">—</div>
+            {% else %}
+                <ul class="list-group list-group-flush small" style="max-height: 420px; overflow-y: auto;">
+                    {% for anchor, files in anchors %}
+                        <li class="list-group-item">
+                            <code>{{ anchor }}</code>
+                            <div class="text-body-secondary">{{ files|join(', ') }}</div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
