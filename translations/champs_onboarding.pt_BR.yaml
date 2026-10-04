@@ -101,13 +101,14 @@ admin:
     button: 'Testar como este usuário'
   pick:
     title: 'Apontar na tela'
-    help: 'Abre a tela do passo numa aba nova. Passe o mouse e clique no elemento que o passo deve destacar: a âncora volta preenchida aqui.'
+    help: 'Abre a tela do passo numa aba nova. Use a tela normalmente (expandir, abrir abas...) e dê Ctrl+clique (⌘+clique no Mac) no elemento que o passo deve destacar: a âncora volta preenchida aqui.'
     button: 'Apontar na tela'
     waiting: 'Aguardando o clique na outra aba…'
     done: 'Âncora preenchida. Confira e salve o passo.'
     fragile: 'Âncora preenchida, mas é frágil (depende da posição no HTML). Se der, peça um data-champs-tour nesse elemento.'
     no_url: 'Esta tela é de um registro: preencha a "URL de exemplo" do tour (com um registro dessa tela) para apontar.'
     blocked: 'O navegador bloqueou a nova aba. Libere pop-ups para este site.'
+    other_route: 'Âncora preenchida, mas escolhida em outra tela (%picked%); o passo acontece em %expected%. Confira.'
   trigger:
     first_access: 'No primeiro acesso à tela'
     new_feature: 'Novidade (a partir da data de publicação)'

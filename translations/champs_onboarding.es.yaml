@@ -101,13 +101,14 @@ admin:
     button: 'Probar como este usuario'
   pick:
     title: 'Señalar en pantalla'
-    help: 'Abre la pantalla del paso en una pestaña nueva. Pasa el mouse y haz clic en el elemento que el paso debe destacar: el ancla vuelve completada aquí.'
+    help: 'Abre la pantalla del paso en una pestaña nueva. Usa la pantalla normalmente (expandir, abrir pestañas...) y haz Ctrl+clic (⌘+clic en Mac) en el elemento que el paso debe destacar: el ancla vuelve completada aquí.'
     button: 'Señalar en pantalla'
     waiting: 'Esperando el clic en la otra pestaña…'
     done: 'Ancla completada. Revísala y guarda el paso.'
     fragile: 'Ancla completada, pero es frágil (depende de la posición en el HTML). Si es posible, pide un data-champs-tour en ese elemento.'
     no_url: 'Esta pantalla es de un registro: completa la "URL de ejemplo" del tour (con un registro de esta pantalla) para señalar.'
     blocked: 'El navegador bloqueó la nueva pestaña. Permite ventanas emergentes para este sitio.'
+    other_route: 'Ancla completada, pero elegida en otra pantalla (%picked%); el paso ocurre en %expected%. Revísala.'
   trigger:
     first_access: 'En el primer acceso a la pantalla'
     new_feature: 'Novedad (desde la fecha de publicación)'

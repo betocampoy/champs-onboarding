@@ -297,7 +297,7 @@ champs_onboarding:
 - **Âncora** do passo: nome do `data-champs-tour` **ou** seletor CSS (até 255 caracteres; regra em
   `TourStep::isSelectorAnchor()`). Os componentes do champs-frontend ≥ 1.9 já geram âncoras
   (`field-<id>`, `page-title`, `list-content`…), então a maioria dos tours não exige mexer em template.
-- **Apontar na tela** (cadastro do passo): abre a tela do passo numa aba nova em modo apontar; o
+- **Apontar na tela** (cadastro do passo): abre a tela do passo numa aba nova em modo apontar (clique normal usa a tela, Ctrl+clique escolhe; avisa se o elemento foi escolhido em outra tela); o
   clique no elemento devolve a âncora para o campo (a mais estável disponível; caminho no DOM aparece
   como frágil).
 - **Testar como… / Apontar como…**: com `admin.switch_user_parameter` (ex.: `_switch_user`) e

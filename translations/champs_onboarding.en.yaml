@@ -101,13 +101,14 @@ admin:
     button: 'Test as this user'
   pick:
     title: 'Point on screen'
-    help: 'Opens the step screen in a new tab. Hover and click the element the step should highlight: the anchor comes back filled in here.'
+    help: 'Opens the step screen in a new tab. Use the screen normally (expand, open tabs...) and Ctrl+click (⌘+click on Mac) the element the step should highlight: the anchor comes back filled in here.'
     button: 'Point on screen'
     waiting: 'Waiting for the click on the other tab…'
     done: 'Anchor filled in. Check it and save the step.'
     fragile: 'Anchor filled in, but it is fragile (depends on the HTML position). If possible, ask for a data-champs-tour on that element.'
     no_url: 'This screen belongs to a record: fill in the tour "Sample URL" (with a record of this screen) to point.'
     blocked: 'The browser blocked the new tab. Allow pop-ups for this site.'
+    other_route: 'Anchor filled in, but chosen on another screen (%picked%); the step happens on %expected%. Please check.'
   trigger:
     first_access: 'On first visit to the screen'
     new_feature: 'New feature (from the publish date)'

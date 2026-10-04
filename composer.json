@@ -15,7 +15,7 @@
         "symfony/twig-bundle": "^7.4",
         "doctrine/orm": "^3.0",
         "doctrine/doctrine-bundle": "^2.13",
-        "betocampoy/champs-frontend": "^1.9.1",
+        "betocampoy/champs-frontend": "^1.9.2",
         "symfony/messenger": "^7.4",
         "symfony/console": "^7.4",
         "symfony/form": "^7.4",
