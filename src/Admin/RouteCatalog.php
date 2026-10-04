@@ -53,6 +53,21 @@ final class RouteCatalog
         return $routes;
     }
 
+    /** @return array<string, string> [nome da rota => URL] das rotas oferecidas */
+    public function urls(): array
+    {
+        $urls = [];
+        foreach ($this->choices() as $name) {
+            try {
+                $urls[$name] = $this->router->generate($name);
+            } catch (\Throwable) {
+                // rota que não gera URL fica de fora do "Apontar na tela"
+            }
+        }
+
+        return $urls;
+    }
+
     public function exists(string $name): bool
     {
         return $this->router->getRouteCollection()->get($name) !== null;

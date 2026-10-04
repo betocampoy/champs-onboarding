@@ -29,13 +29,23 @@ class TourStep
     private int $position = 0;
 
     /**
-     * Valor do atributo data-champs-tour no HTML (ex.: "btn-importar").
-     * Null = passo sem âncora (popover centralizado na tela, ex.: boas-vindas).
+     * Elemento destacado no passo. Duas formas (mesma regra do Onboarding.js):
+     * - nome simples (ex.: "btn-importar") = valor do atributo data-champs-tour;
+     * - seletor CSS (começa com # . [ ou tem espaço, >, =, :, (...) ex.: "#btn-exportar",
+     *   'a[href="/app/clientes/grupos"]', '[name="cliente[nome]"]': dispensa mexer no template.
+     * Null = passo sem âncora (card centralizado, ex.: boas-vindas).
      */
-    #[ORM\Column(length: 100, nullable: true)]
-    #[Assert\Length(max: 100)]
-    #[Assert\Regex(pattern: '/^[A-Za-z0-9_.:-]+$/', message: 'champs_onboarding.step.anchor_format')]
+    #[ORM\Column(length: 255, nullable: true)]
+    #[Assert\Length(max: 255)]
     private ?string $anchor = null;
+
+    /** Nome simples de data-champs-tour (não é seletor CSS). */
+    public const ANCHOR_NAME_PATTERN = '/^[A-Za-z0-9_-][A-Za-z0-9_.-]*$/';
+
+    public static function isSelectorAnchor(?string $anchor): bool
+    {
+        return $anchor !== null && $anchor !== '' && !preg_match(self::ANCHOR_NAME_PATTERN, $anchor);
+    }
 
     #[ORM\Column(length: 150)]
     #[Assert\NotBlank]

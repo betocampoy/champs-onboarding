@@ -1,0 +1,38 @@
+{# Campo "como qual usuário" (switch_user) com sugestões de quem pode ver o tour.
+   Só aparece com champs_onboarding.admin.switch_user_parameter + monitoring.user_class.
+   Variáveis: usersUrl, id (do input) #}
+{% trans_default_domain 'champs_onboarding' %}
+{% if usersUrl %}
+<div class="mb-2">
+    <label class="form-label small mb-1" for="{{ id }}">{{ 'admin.preview_as.label'|trans }}</label>
+    <input type="text" class="form-control form-control-sm" id="{{ id }}" list="{{ id }}-list" autocomplete="off"
+           placeholder="{{ 'admin.preview_as.placeholder'|trans }}" data-champs-onboarding-users-url="{{ usersUrl }}">
+    <datalist id="{{ id }}-list"></datalist>
+    <div class="form-text">{{ 'admin.preview_as.help'|trans }}</div>
+</div>
+<script>
+(() => {
+    const input = document.getElementById({{ id|json_encode|raw }});
+    const list = document.getElementById({{ (id ~ '-list')|json_encode|raw }});
+    let timer = null;
+    const load = () => {
+        const url = new URL(input.dataset.champsOnboardingUsersUrl, window.location.origin);
+        url.searchParams.set('q', input.value.trim());
+        fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+            .then((r) => r.ok ? r.json() : { users: [] })
+            .then(({ users }) => {
+                list.innerHTML = '';
+                (users || []).forEach((u) => {
+                    const o = document.createElement('option');
+                    o.value = u.identifier;
+                    o.label = u.label;
+                    list.appendChild(o);
+                });
+            })
+            .catch(() => {});
+    };
+    input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(load, 250); });
+    input.addEventListener('focus', load, { once: true });
+})();
+</script>
+{% endif %}

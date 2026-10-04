@@ -72,7 +72,23 @@
                 <label class="form-label small fw-semibold" for="champs-onboarding-preview-url"><i class="bi bi-play-circle"></i> {{ 'admin.tour.preview_link'|trans }}</label>
                 <input type="text" readonly class="form-control form-control-sm font-monospace" id="champs-onboarding-preview-url"
                        value="{{ previewUrl }}" onclick="this.select()">
-                <div class="form-text">{{ 'admin.tour.preview_link_help'|trans }}</div>
+                <div class="form-text mb-2">{{ 'admin.tour.preview_link_help'|trans }}</div>
+
+                {% if usersUrl %}
+                    {% include '@ChampsOnboarding/admin/_user_picker.html.twig' with {id: 'champs-onboarding-preview-as'} %}
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="champs-onboarding-preview-as-go">
+                        <i class="bi bi-person-video3"></i> {{ 'admin.preview_as.button'|trans }}
+                    </button>
+                    <script>
+                    document.getElementById('champs-onboarding-preview-as-go').addEventListener('click', () => {
+                        const who = document.getElementById('champs-onboarding-preview-as').value.trim();
+                        if (!who) { document.getElementById('champs-onboarding-preview-as').focus(); return; }
+                        const url = new URL({{ previewUrl|json_encode|raw }});
+                        url.searchParams.set({{ switchUserParameter|json_encode|raw }}, who);
+                        window.location.href = url.toString();
+                    });
+                    </script>
+                {% endif %}
             </div>
         </div>
         {% endif %}
@@ -97,6 +113,7 @@
                             <div class="small mt-1">
                                 {% if step.anchor %}
                                     <i class="bi bi-bullseye"></i> <code>{{ step.anchor }}</code>
+                                    {% if not (step.anchor matches '/^[A-Za-z0-9_-][A-Za-z0-9_.-]*$/') %}<span class="badge text-bg-light border">{{ 'admin.step.selector'|trans }}</span>{% endif %}
                                     {% if missingAnchors[step.id] is defined %}
                                         <span class="text-warning" title="{{ 'admin.step.anchor_missing'|trans }}"><i class="bi bi-exclamation-triangle"></i></span>
                                     {% endif %}

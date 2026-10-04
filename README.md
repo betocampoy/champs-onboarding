@@ -280,6 +280,7 @@ champs_onboarding:
         form_theme: '@ChampsFrontend/form/champs_theme.html.twig'
         route_path_prefixes: [/app]           # telas oferecidas no select (vazio = todas)
         anchor_paths: ['%kernel.project_dir%/templates']  # onde procurar data-champs-tour
+        switch_user_parameter: _switch_user   # liga "Testar como…"/"Apontar como…" (null = desligado)
 ```
 
 - Só rotas GET sem parâmetro obrigatório aparecem como tela de tour (o front precisa gerar a URL).
@@ -287,6 +288,17 @@ champs_onboarding:
   âncora digitada que não existe em nenhum template aparece com aviso.
 - Telas e textos (`champs_onboarding.*.yaml`, pt_BR/en/es) podem ser sobrescritos pelo mecanismo
   padrão do Symfony (`templates/bundles/ChampsOnboardingBundle/`, `translations/`).
+- **Âncora** do passo: nome do `data-champs-tour` **ou** seletor CSS (até 255 caracteres; regra em
+  `TourStep::isSelectorAnchor()`). Os componentes do champs-frontend ≥ 1.9 já geram âncoras
+  (`field-<id>`, `page-title`, `list-content`…), então a maioria dos tours não exige mexer em template.
+- **Apontar na tela** (cadastro do passo): abre a tela do passo numa aba nova em modo apontar; o
+  clique no elemento devolve a âncora para o campo (a mais estável disponível; caminho no DOM aparece
+  como frágil).
+- **Testar como… / Apontar como…**: com `admin.switch_user_parameter` (ex.: `_switch_user`) e
+  `monitoring.user_class`, a tela abre personificando um usuário escolhido entre os que **podem ver o
+  tour** (`/onboarding/admin/tours/{id}/usuarios?q=`). É o caminho para telas que o admin não acessa.
+  O "Apontar como…" sai da personificação sozinho ao terminar; o "Testar como…" volta pelo "sair da
+  personificação" do projeto.
 - **Testar tour** abre `?champs_onboarding_preview=<slug>` na tela do 1º passo. O tour é lido por
   `/onboarding/admin/tours/preview/{slug}`, liberado para o admin e para um admin que esteja
   personificando um usuário (`switch_user`): é o caminho para testar tours de telas que o admin

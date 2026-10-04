@@ -42,8 +42,73 @@
     </div>
 
     <div class="col-xl-5">
+        <div class="card mb-3">
+            <div class="card-header"><i class="bi bi-cursor"></i> {{ 'admin.pick.title'|trans }}</div>
+            <div class="card-body">
+                <p class="small text-body-secondary mb-2">{{ 'admin.pick.help'|trans }}</p>
+                {% include '@ChampsOnboarding/admin/_user_picker.html.twig' with {id: 'champs-onboarding-pick-as'} %}
+                <button type="button" class="btn btn-sm btn-primary" id="champs-onboarding-pick">
+                    <i class="bi bi-cursor"></i> {{ 'admin.pick.button'|trans }}
+                </button>
+                <div class="small mt-2" id="champs-onboarding-pick-status" aria-live="polite"></div>
+            </div>
+        </div>
+        <script>
+        (() => {
+            const routeUrls = {{ routeUrls|json_encode|raw }};
+            const inherited = {{ inheritedRoute|json_encode|raw }};
+            const switchParam = {{ switchUserParameter|json_encode|raw }};
+            const labels = {{ {
+                waiting: 'admin.pick.waiting'|trans,
+                done: 'admin.pick.done'|trans,
+                fragile: 'admin.pick.fragile'|trans,
+                noUrl: 'admin.pick.no_url'|trans,
+                blocked: 'admin.pick.blocked'|trans,
+            }|json_encode|raw }};
+            const status = document.getElementById('champs-onboarding-pick-status');
+            const anchorInput = document.getElementById({{ form.anchor.vars.id|json_encode|raw }});
+            const routeSelect = document.getElementById({{ form.route.vars.id|json_encode|raw }});
+            let nonce = null;
+
+            document.getElementById('champs-onboarding-pick').addEventListener('click', () => {
+                const route = routeSelect.value || inherited;
+                const base = routeUrls[route];
+                if (!base) { status.className = 'small mt-2 text-danger'; status.textContent = labels.noUrl; return; }
+
+                nonce = Math.random().toString(36).slice(2) + Date.now().toString(36);
+                const url = new URL(base, window.location.origin);
+                url.searchParams.set('champs_onboarding_pick', nonce);
+                const who = document.getElementById('champs-onboarding-pick-as')?.value.trim();
+                if (switchParam && who) {
+                    url.searchParams.set(switchParam, who);
+                    url.searchParams.set('champs_onboarding_exit', switchParam); // a aba sai da personificação ao terminar
+                }
+
+                const win = window.open(url.toString(), 'champs-onboarding-pick');
+                if (!win) { status.className = 'small mt-2 text-danger'; status.textContent = labels.blocked; return; }
+                status.className = 'small mt-2 text-body-secondary';
+                status.textContent = labels.waiting;
+            });
+
+            window.addEventListener('message', (e) => {
+                if (e.origin !== window.location.origin || !e.data || e.data.type !== 'champs-onboarding:pick' || e.data.nonce !== nonce) return;
+                anchorInput.value = e.data.anchor;
+                anchorInput.dispatchEvent(new Event('input', { bubbles: true }));
+                anchorInput.focus();
+                status.className = 'small mt-2 ' + (e.data.quality === 'fragile' ? 'text-warning' : 'text-success');
+                status.textContent = e.data.quality === 'fragile' ? labels.fragile : labels.done;
+                nonce = null;
+            });
+        })();
+        </script>
+
         <div class="card">
             <div class="card-header"><i class="bi bi-bullseye"></i> {{ 'admin.step.anchors_known'|trans }}</div>
+            <div class="card-body small border-bottom">
+                <div class="fw-semibold mb-1">{{ 'admin.step.anchors_auto'|trans }}</div>
+                <div class="text-body-secondary">{{ 'admin.step.anchors_auto_help'|trans }}</div>
+                <code class="d-block mt-1">page-title · page-actions · page-counter · page-view-toggle · list-content · list-pager · search-&lt;id&gt; · field-&lt;id do campo&gt; · btn-&lt;id&gt; · card-&lt;id&gt; · tab-&lt;abas&gt;-&lt;aba&gt; · notification-center</code>
+            </div>
             {% if anchors is empty %}
                 <div class="card-body small text-body-secondary">—</div>
             {% else %}

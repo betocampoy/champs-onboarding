@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace BetoCampoy\Champs\Onboarding\Controller\Admin;
 
 use BetoCampoy\Champs\Onboarding\Admin\AnchorCatalog;
+use BetoCampoy\Champs\Onboarding\Admin\EligibleUserFinder;
+use BetoCampoy\Champs\Onboarding\Admin\RouteCatalog;
+use BetoCampoy\Champs\Onboarding\Segment\UserSegmentResolverInterface;
 use BetoCampoy\Champs\Onboarding\Entity\Tour;
 use BetoCampoy\Champs\Onboarding\Entity\TourStep;
 use BetoCampoy\Champs\Onboarding\Enum\TourTrigger;
@@ -45,10 +48,38 @@ final class TourAdminController extends AbstractController
         private readonly TranslatorInterface $translator,
         private readonly TokenStorageInterface $tokenStorage,
         private readonly UserAuthorizationCheckerInterface $userAuth,
+        private readonly RouteCatalog $routeCatalog,
+        private readonly EligibleUserFinder $eligibleUsers,
+        private readonly UserSegmentResolverInterface $segments,
         #[Autowire(param: 'champs_onboarding.admin_role')] private readonly string $adminRole,
         #[Autowire(param: 'champs_onboarding.admin.layout')] private readonly string $layout,
         #[Autowire(param: 'champs_onboarding.admin.form_theme')] private readonly string $formTheme,
+        #[Autowire(param: 'champs_onboarding.admin.switch_user_parameter')] private readonly ?string $switchUserParameter,
     ) {
+    }
+
+    /**
+     * Sugestões do "Testar como…" / "Apontar como…": usuários que podem ver o tour.
+     * GET ?q=trecho do identificador → [{identifier, label}]
+     */
+    #[Route('/{tour}/usuarios', name: 'champs_onboarding_admin_tour_users', requirements: ['tour' => '\d+'], methods: ['GET'])]
+    public function users(Request $request, #[MapEntity(id: 'tour')] Tour $tour): JsonResponse
+    {
+        $this->denyAccessUnlessGranted($this->adminRole);
+
+        $me = $this->getUser()?->getUserIdentifier();
+        $found = array_filter(
+            $this->eligibleUsers->find($tour, (string) $request->query->get('q', ''), 21),
+            static fn (array $u) => $u['identifier'] !== $me, // personificar a si mesmo não faz sentido
+        );
+
+        $users = array_map(function (array $u): array {
+            $label = $u['segment'] !== null ? $this->segments->label($u['segment']) : null;
+
+            return ['identifier' => $u['identifier'], 'label' => $label ? $u['identifier'] . ' — ' . $label : $u['identifier']];
+        }, array_slice(array_values($found), 0, 20));
+
+        return $this->json(['users' => $users]);
     }
 
     #[Route('', name: 'champs_onboarding_admin_tour_index', methods: ['GET'])]
@@ -226,6 +257,7 @@ final class TourAdminController extends AbstractController
             'tour' => $tour,
             'step' => null,
             'anchors' => $this->anchors->all(),
+            ...$this->pickContext($tour, null),
         ]);
     }
 
@@ -249,6 +281,7 @@ final class TourAdminController extends AbstractController
             'tour' => $step->getTour(),
             'step' => $step,
             'anchors' => $this->anchors->all(),
+            ...$this->pickContext($step->getTour(), $step),
         ]);
     }
 
@@ -297,11 +330,28 @@ final class TourAdminController extends AbstractController
 
     private function renderAdmin(string $template, array $params): Response
     {
+        $tour = $params['tour'] ?? null;
+        $switch = $this->switchUserParameter !== null && $this->eligibleUsers->isAvailable() ? $this->switchUserParameter : null;
+
         return $this->render($template, [
             ...$params,
             'champs_onboarding_layout' => $this->layout,
             'champs_onboarding_form_theme' => $this->formTheme,
+            // "Testar como…" / "Apontar como…" (null = desligado)
+            'switchUserParameter' => $switch,
+            'usersUrl' => $tour?->getId() && $switch ? $this->generateUrl('champs_onboarding_admin_tour_users', ['tour' => $tour->getId()]) : null,
         ]);
+    }
+
+    /** Dados do "Apontar na tela": URL de cada tela e a tela do passo (a própria ou a herdada). */
+    private function pickContext(Tour $tour, ?TourStep $step): array
+    {
+        $routes = $tour->getEffectiveRoutes();
+        $inherited = $step !== null
+            ? ($routes[$step->getPosition()] ?? $tour->getStartRoute())
+            : ($routes === [] ? $tour->getStartRoute() : end($routes));
+
+        return ['routeUrls' => $this->routeCatalog->urls(), 'inheritedRoute' => $inherited];
     }
 
     /** @return list<TourStep> */
@@ -319,7 +369,8 @@ final class TourAdminController extends AbstractController
         $known = $this->anchors->all();
         $missing = [];
         foreach ($tour->getSteps() as $step) {
-            if ($step->getAnchor() !== null && !isset($known[$step->getAnchor()])) {
+            // seletor CSS não dá para conferir pelo template: só na tela
+            if ($step->getAnchor() !== null && !TourStep::isSelectorAnchor($step->getAnchor()) && !isset($known[$step->getAnchor()])) {
                 $missing[$step->getId()] = true;
             }
         }
