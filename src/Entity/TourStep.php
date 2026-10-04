@@ -81,6 +81,27 @@ class TourStep
     #[ORM\Column]
     private bool $advanceOnClick = false;
 
+    /**
+     * Se true, o usuário precisa digitar no campo do elemento destacado (o próprio
+     * input/select/textarea ou o primeiro dentro dele) para o "Próximo" liberar.
+     * Enter no campo também avança (e pode enviar o formulário: o tour continua no
+     * passo seguinte na página que carregar).
+     */
+    #[ORM\Column(name: 'require_input', options: ['default' => false])]
+    private bool $requireInput = false;
+
+    /**
+     * Ao chegar neste passo, fecha o modal aberto (como o "X"), a não ser que o elemento
+     * do passo esteja dentro dele. Para seguir com um elemento fora do modal.
+     */
+    #[ORM\Column(name: 'close_modal', options: ['default' => false])]
+    private bool $closeModal = false;
+
+    /** Com requireInput: o valor precisa CONTER este texto (sem diferenciar maiúscula/acento). Null = qualquer coisa. */
+    #[ORM\Column(name: 'required_text', length: 150, nullable: true)]
+    #[Assert\Length(max: 150)]
+    private ?string $requiredText = null;
+
     public function __construct(string $title, string $content)
     {
         $this->title = $title;
@@ -119,6 +140,27 @@ class TourStep
     public function isAdvanceOnClick(): bool { return $this->advanceOnClick; }
     public function setAdvanceOnClick(bool $advanceOnClick): static { $this->advanceOnClick = $advanceOnClick; return $this; }
 
+    public function isRequireInput(): bool { return $this->requireInput; }
+    public function setRequireInput(bool $requireInput): static { $this->requireInput = $requireInput; return $this; }
+
+    public function isCloseModal(): bool { return $this->closeModal; }
+    public function setCloseModal(bool $closeModal): static { $this->closeModal = $closeModal; return $this; }
+
+    public function getRequiredText(): ?string { return $this->requiredText; }
+    public function setRequiredText(?string $requiredText): static { $this->requiredText = $requiredText !== null && trim($requiredText) !== '' ? trim($requiredText) : null; return $this; }
+
+    /** Regras que dependem de mais de um campo do passo. */
+    #[Assert\Callback]
+    public function validateRules(\Symfony\Component\Validator\Context\ExecutionContextInterface $context): void
+    {
+        if ($this->requireInput && ($this->anchor === null || $this->anchor === '')) {
+            $context->buildViolation('champs_onboarding.step.require_input_needs_anchor')->atPath('requireInput')->addViolation();
+        }
+        if ($this->requireInput && $this->advanceOnClick) {
+            $context->buildViolation('champs_onboarding.step.require_input_and_click')->atPath('requireInput')->addViolation();
+        }
+    }
+
     /** Formato consumido pelo módulo Onboarding.js do champs-core-js. */
     public function toArray(): array
     {
@@ -132,6 +174,9 @@ class TourStep
             'helpUrl' => $this->helpUrl,
             'helpLabel' => $this->helpLabel,
             'advanceOnClick' => $this->advanceOnClick,
+            'requireInput' => $this->requireInput,
+            'requiredText' => $this->requiredText,
+            'closeModal' => $this->closeModal,
         ];
     }
 }

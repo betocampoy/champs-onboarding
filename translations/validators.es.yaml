@@ -2,3 +2,5 @@ champs_onboarding.tour.slug_format: 'Usa solo minúsculas, números y guion (ej.
 champs_onboarding.tour.slug_unique: 'Ya existe un tour con este identificador.'
 champs_onboarding.step.anchor_format: 'Usa solo letras, números, guion, punto, dos puntos o guion bajo.'
 champs_onboarding.tour.sample_url_format: 'Usa una ruta del propio sistema que empiece con / (ej.: /app/atendimento/remessas/123).'
+champs_onboarding.step.require_input_needs_anchor: 'Para exigir escritura, el paso necesita un elemento destacado (ancla) con el campo.'
+champs_onboarding.step.require_input_and_click: 'Elige solo una: avanzar al hacer clic o exigir escritura.'

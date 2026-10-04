@@ -125,6 +125,8 @@
                                     · <i class="bi bi-box-arrow-right"></i> <code>{{ routes[step.position] }}</code>
                                 {% endif %}
                                 {% if step.advanceOnClick %} · <i class="bi bi-hand-index"></i>{% endif %}
+                                {% if step.closeModal %} · <i class="bi bi-window-x" title="{{ 'admin.step.close_modal'|trans }}"></i>{% endif %}
+                                {% if step.requireInput %} · <i class="bi bi-input-cursor-text" title="{{ 'admin.step.require_input'|trans }}"></i>{% if step.requiredText %} <code>{{ step.requiredText }}</code>{% endif %}{% endif %}
                                 {% if step.helpUrl %} · <i class="bi bi-link-45deg"></i>{% endif %}
                             </div>
                         </div>

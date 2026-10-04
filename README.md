@@ -300,6 +300,12 @@ champs_onboarding:
 - **Apontar na tela** (cadastro do passo): abre a tela do passo numa aba nova em modo apontar (clique normal usa a tela, Ctrl+clique escolhe; avisa se o elemento foi escolhido em outra tela); o
   clique no elemento devolve a âncora para o campo (a mais estável disponível; caminho no DOM aparece
   como frágil).
+- **Opções do passo:**
+  - *Avança ao clicar no elemento* — o próprio elemento destacado avança (ex.: botão que abre um modal).
+  - *Exige digitar no campo* (+ *texto esperado*, opcional) — o "Próximo" só libera com o campo preenchido;
+    Enter avança e deixa o formulário seguir (ex.: tour de pesquisa). Precisa de âncora; não combina com
+    "avança ao clicar".
+  - *Fechar modal aberto ao chegar neste passo* — para seguir com um elemento fora do modal.
 - **Testar como… / Apontar como…**: com `admin.switch_user_parameter` (ex.: `_switch_user`) e
   `monitoring.user_class`, a tela abre personificando um usuário escolhido entre os que **podem ver o
   tour** (`/onboarding/admin/tours/{id}/usuarios?q=`). É o caminho para telas que o admin não acessa.

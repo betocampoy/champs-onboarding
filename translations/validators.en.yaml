@@ -2,3 +2,5 @@ champs_onboarding.tour.slug_format: 'Use only lowercase letters, numbers and hyp
 champs_onboarding.tour.slug_unique: 'A tour with this identifier already exists.'
 champs_onboarding.step.anchor_format: 'Use only letters, numbers, hyphen, dot, colon or underscore.'
 champs_onboarding.tour.sample_url_format: 'Use a path of this system starting with / (e.g.: /app/atendimento/remessas/123).'
+champs_onboarding.step.require_input_needs_anchor: 'To require typing, the step needs a highlighted element (anchor) with the field.'
+champs_onboarding.step.require_input_and_click: 'Choose only one: advance on click or require typing.'

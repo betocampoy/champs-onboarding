@@ -74,6 +74,21 @@ final class TourStepFormType extends AbstractType
                 'label' => 'admin.step.advance_on_click',
                 'help' => 'admin.step.advance_on_click_help',
                 'required' => false,
+            ])
+            ->add('closeModal', CheckboxType::class, [
+                'label' => 'admin.step.close_modal',
+                'help' => 'admin.step.close_modal_help',
+                'required' => false,
+            ])
+            ->add('requireInput', CheckboxType::class, [
+                'label' => 'admin.step.require_input',
+                'help' => 'admin.step.require_input_help',
+                'required' => false,
+            ])
+            ->add('requiredText', TextType::class, [
+                'label' => 'admin.step.required_text',
+                'help' => 'admin.step.required_text_help',
+                'required' => false,
             ]);
     }
 
