@@ -1,3 +1,4 @@
 champs_onboarding.tour.slug_format: 'Usa solo minúsculas, números y guion (ej.: importacion-planilla).'
 champs_onboarding.tour.slug_unique: 'Ya existe un tour con este identificador.'
 champs_onboarding.step.anchor_format: 'Usa solo letras, números, guion, punto, dos puntos o guion bajo.'
+champs_onboarding.tour.sample_url_format: 'Usa una ruta del propio sistema que empiece con / (ej.: /app/atendimento/remessas/123).'

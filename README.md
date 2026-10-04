@@ -283,7 +283,13 @@ champs_onboarding:
         switch_user_parameter: _switch_user   # liga "Testar como…"/"Apontar como…" (null = desligado)
 ```
 
-- Só rotas GET sem parâmetro obrigatório aparecem como tela de tour (o front precisa gerar a URL).
+- Toda rota GET aparece como tela de tour, inclusive as de um **registro** (`/remessas/{id}`): o tour
+  dispara pelo nome da rota, então aparece quando o usuário abre **qualquer** registro daquela tela e
+  ensina em cima do dado real. O front não consegue *levar* o usuário até uma tela de registro (não sabe
+  qual), então o passo seguinte numa tela dessas avisa "continua em outra tela".
+- **URL de exemplo** (`Tour::sampleUrl`): URL de um registro real da tela do 1º passo, usada só pelo
+  admin no Testar/Testar como/Apontar dessas telas. O cadastro confere se ela abre a tela certa
+  (`RouteCatalog::routeOfUrl()`). Tour **obrigatório** não pode começar em tela de registro.
 - As âncoras `data-champs-tour` já usadas nos templates são sugeridas no cadastro do passo;
   âncora digitada que não existe em nenhum template aparece com aviso.
 - Telas e textos (`champs_onboarding.*.yaml`, pt_BR/en/es) podem ser sobrescritos pelo mecanismo

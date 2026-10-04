@@ -16,13 +16,19 @@ use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\Form\FormError;
+use Symfony\Component\Form\FormEvent;
+use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class TourFormType extends AbstractType
 {
-    public function __construct(private readonly RouteCatalog $routes)
-    {
+    public function __construct(
+        private readonly RouteCatalog $routes,
+        private readonly TranslatorInterface $translator,
+    ) {
     }
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
@@ -52,6 +58,12 @@ final class TourFormType extends AbstractType
                 'choices' => $routeChoices,
                 'choice_translation_domain' => false,
                 'placeholder' => 'admin.tour.start_route_placeholder',
+            ])
+            ->add('sampleUrl', TextType::class, [
+                'label' => 'admin.tour.sample_url',
+                'help' => 'admin.tour.sample_url_help',
+                'required' => false,
+                'attr' => ['placeholder' => '/app/.../123'],
             ])
             ->add('trigger', EnumType::class, [
                 'label' => 'admin.tour.trigger',
@@ -86,6 +98,26 @@ final class TourFormType extends AbstractType
                 'help' => 'admin.tour.monitored_help',
                 'required' => false,
             ]);
+
+        $builder->addEventListener(FormEvents::POST_SUBMIT, function (FormEvent $event): void {
+            $tour = $event->getData();
+            $form = $event->getForm();
+            if (!$tour instanceof Tour || $tour->getStartRoute() === '') {
+                return;
+            }
+
+            $firstRoute = $tour->getEffectiveRoutes()[0] ?? $tour->getStartRoute();
+
+            // Obrigatório redireciona o usuário até o tour: precisa de uma tela que gere URL sozinha.
+            if ($tour->isMandatory() && $this->routes->needsParameters($firstRoute)) {
+                $form->get('mandatory')->addError(new FormError($this->translator->trans('admin.tour.mandatory_needs_plain_route', [], 'champs_onboarding')));
+            }
+
+            // A URL de exemplo tem de abrir a tela do 1º passo (senão o teste/apontar abre outra tela).
+            if ($tour->getSampleUrl() !== null && $this->routes->routeOfUrl($tour->getSampleUrl()) !== $firstRoute) {
+                $form->get('sampleUrl')->addError(new FormError($this->translator->trans('admin.tour.sample_url_wrong_route', ['%route%' => $firstRoute], 'champs_onboarding')));
+            }
+        });
     }
 
     public function configureOptions(OptionsResolver $resolver): void

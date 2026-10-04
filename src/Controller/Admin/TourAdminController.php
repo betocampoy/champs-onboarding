@@ -22,6 +22,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Exception\ExceptionInterface as RoutingException;
@@ -51,6 +52,7 @@ final class TourAdminController extends AbstractController
         private readonly RouteCatalog $routeCatalog,
         private readonly EligibleUserFinder $eligibleUsers,
         private readonly UserSegmentResolverInterface $segments,
+        private readonly RequestStack $requestStack,
         #[Autowire(param: 'champs_onboarding.admin_role')] private readonly string $adminRole,
         #[Autowire(param: 'champs_onboarding.admin.layout')] private readonly string $layout,
         #[Autowire(param: 'champs_onboarding.admin.form_theme')] private readonly string $formTheme,
@@ -201,12 +203,21 @@ final class TourAdminController extends AbstractController
             return null;
         }
 
+        $first = $tour->getEffectiveRoutes()[0] ?? $tour->getStartRoute();
+
+        // Tela com registro ({id}): abre a URL de exemplo do tour (um registro real).
+        if ($this->routeCatalog->needsParameters($first)) {
+            $sample = $tour->getSampleUrl();
+            if ($sample === null || $this->routeCatalog->routeOfUrl($sample) !== $first) {
+                return null;
+            }
+            $host = $this->requestStack->getCurrentRequest()?->getSchemeAndHttpHost() ?? '';
+
+            return $host . $sample . (str_contains($sample, '?') ? '&' : '?') . 'champs_onboarding_preview=' . rawurlencode($tour->getSlug());
+        }
+
         try {
-            return $this->generateUrl(
-                $tour->getEffectiveRoutes()[0] ?? $tour->getStartRoute(),
-                ['champs_onboarding_preview' => $tour->getSlug()],
-                UrlGeneratorInterface::ABSOLUTE_URL,
-            );
+            return $this->generateUrl($first, ['champs_onboarding_preview' => $tour->getSlug()], UrlGeneratorInterface::ABSOLUTE_URL);
         } catch (RoutingException) {
             return null;
         }
@@ -351,7 +362,15 @@ final class TourAdminController extends AbstractController
             ? ($routes[$step->getPosition()] ?? $tour->getStartRoute())
             : ($routes === [] ? $tour->getStartRoute() : end($routes));
 
-        return ['routeUrls' => $this->routeCatalog->urls(), 'inheritedRoute' => $inherited];
+        // Telas com registro não geram URL: o apontar usa a URL de exemplo do tour, se for da mesma tela.
+        $sample = $tour->getSampleUrl();
+
+        return [
+            'routeUrls' => $this->routeCatalog->urls(),
+            'inheritedRoute' => $inherited,
+            'sampleUrl' => $sample,
+            'sampleRoute' => $sample !== null ? $this->routeCatalog->routeOfUrl($sample) : null,
+        ];
     }
 
     /** @return list<TourStep> */

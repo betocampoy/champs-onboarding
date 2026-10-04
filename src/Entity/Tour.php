@@ -84,6 +84,16 @@ class Tour
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $publishedAt = null;
 
+    /**
+     * URL de um registro real da tela inicial (ex.: "/app/remessas/123"), usada só pelo
+     * admin para "Testar" e "Apontar na tela" quando a tela exige parâmetro ({id}).
+     * O tour em si dispara em qualquer registro daquela tela (pelo nome da rota).
+     */
+    #[ORM\Column(name: 'sample_url', length: 500, nullable: true)]
+    #[Assert\Length(max: 500)]
+    #[Assert\Regex(pattern: '#^/(?!/)#', message: 'champs_onboarding.tour.sample_url_format')]
+    private ?string $sampleUrl = null;
+
     /** @var Collection<int, TourStep> */
     #[ORM\OneToMany(targetEntity: TourStep::class, mappedBy: 'tour', cascade: ['persist', 'remove'], orphanRemoval: true)]
     #[ORM\OrderBy(['position' => 'ASC'])]
@@ -145,6 +155,9 @@ class Tour
 
     public function getPublishedAt(): ?\DateTimeImmutable { return $this->publishedAt; }
     public function setPublishedAt(?\DateTimeImmutable $publishedAt): static { $this->publishedAt = $publishedAt; return $this; }
+
+    public function getSampleUrl(): ?string { return $this->sampleUrl; }
+    public function setSampleUrl(?string $sampleUrl): static { $this->sampleUrl = $sampleUrl !== null && trim($sampleUrl) !== '' ? trim($sampleUrl) : null; return $this; }
 
     public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
     public function getUpdatedAt(): ?\DateTimeImmutable { return $this->updatedAt; }

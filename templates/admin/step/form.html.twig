@@ -57,6 +57,9 @@
         (() => {
             const routeUrls = {{ routeUrls|json_encode|raw }};
             const inherited = {{ inheritedRoute|json_encode|raw }};
+            // tela com registro ({id}) não gera URL: usa a URL de exemplo do tour, se for dessa tela
+            const sampleUrl = {{ sampleUrl|json_encode|raw }};
+            const sampleRoute = {{ sampleRoute|json_encode|raw }};
             const switchParam = {{ switchUserParameter|json_encode|raw }};
             const labels = {{ {
                 waiting: 'admin.pick.waiting'|trans,
@@ -72,7 +75,7 @@
 
             document.getElementById('champs-onboarding-pick').addEventListener('click', () => {
                 const route = routeSelect.value || inherited;
-                const base = routeUrls[route];
+                const base = routeUrls[route] || (sampleUrl && route === sampleRoute ? sampleUrl : null);
                 if (!base) { status.className = 'small mt-2 text-danger'; status.textContent = labels.noUrl; return; }
 
                 nonce = Math.random().toString(36).slice(2) + Date.now().toString(36);
