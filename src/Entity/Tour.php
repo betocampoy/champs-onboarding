@@ -94,6 +94,17 @@ class Tour
     #[Assert\Regex(pattern: '#^/(?!/)#', message: 'champs_onboarding.tour.sample_url_format')]
     private ?string $sampleUrl = null;
 
+    /**
+     * Condição: o tour só existe para o usuário quando este elemento está na tela
+     * (mesmo formato da âncora do passo: nome do data-champs-tour ou seletor CSS).
+     * Ex.: tour de navegar numa conversa só quando já existe uma conversa na lista.
+     * Automático: o Onboarding.js observa a tela e só inicia quando o elemento aparece.
+     * Manual: o "?" só oferece o tour com o elemento na tela. Null = sem condição.
+     */
+    #[ORM\Column(name: 'condition_anchor', length: 255, nullable: true)]
+    #[Assert\Length(max: 255)]
+    private ?string $conditionAnchor = null;
+
     /** @var Collection<int, TourStep> */
     #[ORM\OneToMany(targetEntity: TourStep::class, mappedBy: 'tour', cascade: ['persist', 'remove'], orphanRemoval: true)]
     #[ORM\OrderBy(['position' => 'ASC'])]
@@ -158,6 +169,10 @@ class Tour
 
     public function getSampleUrl(): ?string { return $this->sampleUrl; }
     public function setSampleUrl(?string $sampleUrl): static { $this->sampleUrl = $sampleUrl !== null && trim($sampleUrl) !== '' ? trim($sampleUrl) : null; return $this; }
+
+    public function getConditionAnchor(): ?string { return $this->conditionAnchor; }
+    public function setConditionAnchor(?string $conditionAnchor): static { $this->conditionAnchor = $conditionAnchor !== null && trim($conditionAnchor) !== '' ? trim($conditionAnchor) : null; return $this; }
+    public function isConditional(): bool { return $this->conditionAnchor !== null; }
 
     public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
     public function getUpdatedAt(): ?\DateTimeImmutable { return $this->updatedAt; }

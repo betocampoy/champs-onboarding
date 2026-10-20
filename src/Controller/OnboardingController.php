@@ -33,15 +33,32 @@ final class OnboardingController extends AbstractController
     {
     }
 
-    /** GET /onboarding/tour?route=app_x → tour a exibir nesta rota (ou null). */
+    /** GET /onboarding/tour?route=app_x → {tour: tour a exibir (ou null), waiting: tours condicionais}. */
     #[Route('/tour', name: 'champs_onboarding_tour', methods: ['GET'])]
     public function tour(Request $request): JsonResponse
     {
         $route = (string) $request->query->get('route', '');
 
-        return $this->handle(fn (UserInterface $user) => [
-            'tour' => $route === '' ? null : $this->manager->resolveForRoute($user, $route),
-        ]);
+        return $this->handle(fn (UserInterface $user) => $route === ''
+            ? ['tour' => null, 'waiting' => []]
+            : $this->manager->resolveForRoute($user, $route));
+    }
+
+    /** POST /onboarding/begin {tour} → o elemento da condição apareceu: inicia o tour (null = já visto). */
+    #[Route('/begin', name: 'champs_onboarding_begin', methods: ['POST'])]
+    public function begin(Request $request): JsonResponse
+    {
+        return $this->handle(function (UserInterface $user) use ($request) {
+            $this->denyCrossSite($request);
+
+            try {
+                $data = $request->toArray();
+            } catch (JsonException) {
+                throw OnboardingException::invalidPayload();
+            }
+
+            return ['tour' => $this->manager->beginWhenShown($user, (string) ($data['tour'] ?? ''))];
+        });
     }
 
     /** GET /onboarding/tour/{slug} → abre/reabre o tour manualmente. */

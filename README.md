@@ -16,7 +16,11 @@ src/
 │   ├── Tour.php                   # champs_onboarding_tour
 │   ├── TourStep.php               # champs_onboarding_step
 │   └── TourProgress.php           # champs_onboarding_progress
-├── Command/SyncMonitoredToursCommand.php  # champs:onboarding:sync
+├── Command/
+│   ├── SyncMonitoredToursCommand.php     # champs:onboarding:sync
+│   ├── ImportToursCommand.php            # champs:onboarding:import (YAML → banco)
+│   └── ExportToursCommand.php            # champs:onboarding:export (banco → YAML)
+├── Seed/TourSeeder.php            # formato YAML dos tours versionados
 ├── Controller/OnboardingController.php   # endpoints JSON
 ├── EventListener/
 │   ├── TourMonitoringListener.php        # tour virou monitorado → agenda sync
@@ -101,7 +105,8 @@ champs_onboarding:
 
 | Método | Rota | Uso |
 |---|---|---|
-| GET | `/onboarding/tour?route=app_x` | Tour a exibir nesta rota (retoma ou inicia) |
+| GET | `/onboarding/tour?route=app_x` | `{tour, waiting}`: tour a exibir nesta rota (retoma ou inicia) e tours condicionais à espera |
+| POST | `/onboarding/begin` | `{tour}`: o elemento da condição apareceu, inicia o tour (`tour: null` se já visto) |
 | GET | `/onboarding/tour/{slug}` | Abre/reabre manualmente (botão "?") |
 | POST | `/onboarding/progress` | `{tour, step, action}` com action `next`, `complete` ou `skip` |
 | GET | `/onboarding/available?route=app_x` | Tours da página para o menu de ajuda |
@@ -119,6 +124,45 @@ Erros de regra voltam como JSON `{error}` em português (401 sem login, 404 tour
 As rotas só existem pelo import acima. O `config/routes.yaml` padrão do Symfony 7.4
 (`resource: routing.controllers`) importaria todo controller com `#[Route]`, inclusive os do
 bundle e sem prefixo; o `ExcludeFromRoutingControllersPass` tira os controllers do bundle dessa descoberta.
+
+## Quando o tour dispara
+
+`Tour::trigger`: `first_access` (primeira visita à tela inicial), `new_feature` (igual, a partir de
+`publishedAt`) ou `manual` (nunca sozinho: só pelo botão "?").
+
+**Tour condicional** (`Tour::conditionAnchor`, desde 0.6): âncora ou seletor CSS (mesmo formato do passo)
+de um elemento da tela inicial. O tour só existe para o usuário com o elemento visível:
+
+- automático: o `GET /tour` devolve o tour em `waiting` sem gravar nada; o `Onboarding.js` (champs-frontend
+  ≥ 1.12) observa a tela e chama `POST /begin` quando o elemento aparece e não há outro tour aberto. Se o
+  elemento nunca aparecer, o tour segue "não visto";
+- manual: o "?" só oferece o tour com o elemento na tela (`/available` devolve `condition`);
+- tour sem condição abre primeiro; os condicionais esperam ele fechar;
+- obrigatório não pode ter condição (o cadastro e o import recusam).
+
+Ex.: tour "navegar na conversa" com condição no item da lista de conversas.
+
+## Tours versionados em YAML (seed)
+
+Um YAML por tour em `seed.path` (padrão `config/onboarding/tours/`), formato no docblock de
+`Seed\TourSeeder`. Serve para o tour ir junto com a feature no repositório do projeto.
+
+```bash
+php bin/console champs:onboarding:import [arquivos...] [--dry-run] [--update]
+php bin/console champs:onboarding:export <slug>... | --all [--stdout]
+```
+
+- O import cria só os tours que não existem (pelo slug), sempre **inativos**: o admin testa e ativa.
+  Tour existente é pulado (o ajuste feito no admin vale); `--update` sobrescreve dados e passos,
+  mantendo "ativo" e o progresso. Valida como o cadastro (entidades, rotas existentes, obrigatório sem
+  condição). Pode rodar em todo deploy.
+- O export grava o tour do banco em YAML (ex.: depois de ajustar com "Apontar na tela" em dev).
+
+```yaml
+champs_onboarding:
+    seed:
+        path: '%kernel.project_dir%/config/onboarding/tours'
+```
 
 ## Quem vê cada tour (elegibilidade)
 

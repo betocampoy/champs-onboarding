@@ -71,6 +71,12 @@ final class TourFormType extends AbstractType
                 'choice_label' => static fn (TourTrigger $t) => 'admin.trigger.' . $t->value,
                 'help' => 'admin.tour.trigger_help',
             ])
+            ->add('conditionAnchor', TextType::class, [
+                'label' => 'admin.tour.condition_anchor',
+                'help' => 'admin.tour.condition_anchor_help',
+                'required' => false,
+                'attr' => ['list' => 'champs-onboarding-anchors', 'autocomplete' => 'off'],
+            ])
             ->add('publishedAt', DateTimeType::class, [
                 'label' => 'admin.tour.published_at',
                 'help' => 'admin.tour.published_at_help',
@@ -111,6 +117,11 @@ final class TourFormType extends AbstractType
             // Obrigatório redireciona o usuário até o tour: precisa de uma tela que gere URL sozinha.
             if ($tour->isMandatory() && $this->routes->needsParameters($firstRoute)) {
                 $form->get('mandatory')->addError(new FormError($this->translator->trans('admin.tour.mandatory_needs_plain_route', [], 'champs_onboarding')));
+            }
+
+            // Obrigatório leva o usuário até o tour: se o elemento não existir, ele ficaria preso.
+            if ($tour->isMandatory() && $tour->isConditional()) {
+                $form->get('conditionAnchor')->addError(new FormError($this->translator->trans('admin.tour.condition_not_mandatory', [], 'champs_onboarding')));
             }
 
             // A URL de exemplo tem de abrir a tela do 1º passo (senão o teste/apontar abre outra tela).

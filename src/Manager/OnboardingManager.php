@@ -36,21 +36,29 @@ final class OnboardingManager
     }
 
     /**
-     * Tour a exibir na rota atual, já no formato do Onboarding.js, ou null.
+     * O que o Onboarding.js faz nesta rota:
+     * - tour: o tour a exibir agora (formato do Onboarding.js) ou null;
+     * - waiting: tours condicionais ainda não vistos ({tour, condition}). Não são marcados
+     *   como iniciados aqui: o front observa a tela e chama beginWhenShown() quando o
+     *   elemento da condição aparecer (e não houver outro tour aberto).
      *
-     * Ordem: 1) retoma um tour em andamento cujo passo atual é nesta rota;
-     *        2) inicia um tour automático desta rota ainda não visto.
+     * Ordem do "tour": 1) retoma um tour em andamento cujo passo atual é nesta rota;
+     *                  2) inicia o tour automático sem condição desta rota ainda não visto.
+     *
+     * @return array{tour: ?array, waiting: list<array{tour: string, condition: string}>}
      */
-    public function resolveForRoute(UserInterface $user, string $route): ?array
+    public function resolveForRoute(UserInterface $user, string $route): array
     {
         $userId = $user->getUserIdentifier();
+        $current = null;
 
         foreach ($this->progress->findInProgressForUser($userId) as $progress) {
             $tour = $progress->getTour();
             $routes = $tour->getEffectiveRoutes();
 
             if (($routes[$progress->getCurrentStep()] ?? null) === $route && $this->canSee($user, $tour)) {
-                return $this->toPayload($tour, $progress);
+                $current = $this->toPayload($tour, $progress);
+                break;
             }
         }
 
@@ -59,6 +67,7 @@ final class OnboardingManager
             fn (Tour $t) => $t->countSteps() > 0 && $this->canSee($user, $t),
         ));
         $seen = $this->progress->findForUserIndexedByTour($userId, $candidates);
+        $waiting = [];
 
         foreach ($candidates as $tour) {
             $progress = $seen[$tour->getId()] ?? null;
@@ -67,15 +76,44 @@ final class OnboardingManager
                 continue; // já iniciado/concluído/pulado: não dispara de novo sozinho
             }
 
+            if ($tour->isConditional()) {
+                $waiting[] = ['tour' => $tour->getSlug(), 'condition' => $tour->getConditionAnchor()];
+                continue;
+            }
+
+            if ($current !== null) {
+                continue; // um tour por vez: o próximo dispara numa próxima visita
+            }
+
             // Sem linha (tour não monitorado) ou PENDING (monitorado): começa agora.
             $progress ??= new TourProgress($userId, $tour, false);
             $progress->begin();
             $this->save($user, $progress);
-
-            return $this->toPayload($tour, $progress);
+            $current = $this->toPayload($tour, $progress);
         }
 
-        return null;
+        return ['tour' => $current, 'waiting' => $waiting];
+    }
+
+    /**
+     * Tour condicional cujo elemento acabou de aparecer na tela: marca como iniciado e
+     * devolve o payload. Null se o usuário já viu o tour (ex.: abriu em outra aba).
+     */
+    public function beginWhenShown(UserInterface $user, string $slug): ?array
+    {
+        $tour = $this->getVisibleTour($user, $slug);
+        $userId = $user->getUserIdentifier();
+
+        $progress = $this->progress->findOneForUser($userId, $tour);
+        if ($progress !== null && !$progress->isPending()) {
+            return null;
+        }
+
+        $progress ??= new TourProgress($userId, $tour, false);
+        $progress->begin();
+        $this->save($user, $progress);
+
+        return $this->toPayload($tour, $progress);
     }
 
     /** Abre (ou reabre do início) um tour pelo slug — botão "?". */
@@ -135,8 +173,9 @@ final class OnboardingManager
 
     /**
      * Tours disponíveis na rota (inclusive manuais), para o menu de ajuda.
+     * condition: o front só oferece o tour com esse elemento na tela.
      *
-     * @return list<array{slug: string, name: string, description: ?string}>
+     * @return list<array{slug: string, name: string, description: ?string, condition: ?string}>
      */
     public function listAvailable(UserInterface $user, string $route): array
     {
@@ -147,6 +186,7 @@ final class OnboardingManager
                     'slug' => $tour->getSlug(),
                     'name' => $tour->getName(),
                     'description' => $tour->getDescription(),
+                    'condition' => $tour->getConditionAnchor(),
                 ];
             }
         }

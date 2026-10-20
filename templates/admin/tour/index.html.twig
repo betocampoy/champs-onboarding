@@ -41,7 +41,10 @@
                         <div class="small text-body-secondary"><code>{{ tour.slug }}</code></div>
                     </td>
                     <td class="small"><code>{{ tour.startRoute }}</code></td>
-                    <td class="small">{{ ('admin.trigger.' ~ tour.trigger.value)|trans }}</td>
+                    <td class="small">
+                        {{ ('admin.trigger.' ~ tour.trigger.value)|trans }}
+                        {% if tour.conditional %}<div class="text-body-secondary" title="{{ 'admin.tour.condition_anchor'|trans }}"><i class="bi bi-funnel"></i> <code>{{ tour.conditionAnchor }}</code></div>{% endif %}
+                    </td>
                     <td class="text-center">{{ tour.countSteps }}</td>
                     <td class="text-center">{{ row.started }}</td>
                     <td class="text-center">{{ row.started > 0 ? row.completionRate ~ '%' : '—' }}</td>

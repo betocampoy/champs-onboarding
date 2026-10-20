@@ -42,6 +42,7 @@
             <div class="card-body">
                 <div class="row">
                     {{ form_row(form.trigger) }}
+                    {{ form_row(form.conditionAnchor) }}
                     {{ form_row(form.publishedAt) }}
                     {{ form_row(form.requiredAttribute) }}
                     {{ form_row(form.priority) }}
@@ -51,6 +52,10 @@
                 </div>
             </div>
         </div>
+
+        <datalist id="champs-onboarding-anchors">
+            {% for anchor in anchors|keys %}<option value="{{ anchor }}"></option>{% endfor %}
+        </datalist>
 
         <button type="submit" class="btn btn-primary">{{ 'admin.save'|trans }}</button>
         <a href="{{ path('champs_onboarding_admin_tour_index') }}" class="btn btn-link">{{ 'admin.cancel'|trans }}</a>

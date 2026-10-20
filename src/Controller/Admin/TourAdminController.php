@@ -118,7 +118,7 @@ final class TourAdminController extends AbstractController
             return $this->redirectToRoute('champs_onboarding_admin_tour_edit', ['tour' => $tour->getId()]);
         }
 
-        return $this->renderAdmin('@ChampsOnboarding/admin/tour/form.html.twig', ['form' => $form, 'tour' => null]);
+        return $this->renderAdmin('@ChampsOnboarding/admin/tour/form.html.twig', ['form' => $form, 'tour' => null, 'anchors' => $this->anchors->all()]);
     }
 
     #[Route('/{tour}', name: 'champs_onboarding_admin_tour_edit', requirements: ['tour' => '\d+'], methods: ['GET', 'POST'])]
@@ -143,6 +143,7 @@ final class TourAdminController extends AbstractController
             'routes' => $tour->getEffectiveRoutes(),
             'missingAnchors' => $this->missingAnchors($tour),
             'previewUrl' => $this->previewUrl($tour),
+            'anchors' => $this->anchors->all(),
         ]);
     }
 
