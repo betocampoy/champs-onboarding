@@ -350,6 +350,11 @@ champs_onboarding:
     Enter avança e deixa o formulário seguir (ex.: tour de pesquisa). Precisa de âncora; não combina com
     "avança ao clicar".
   - *Fechar modal aberto ao chegar neste passo* — para seguir com um elemento fora do modal.
+- **Item de menu suspenso** (dropdown do Bootstrap, ex.: menu do usuário): basta a âncora do item; se o menu estiver
+  fechado, o tour abre sozinho (champs-frontend ≥ 1.13.3). Cada passo reabre o menu, já que o clique no "Próximo"
+  o fecha. Para ensinar o usuário a abrir o menu, use antes um passo no botão do menu com *Avança ao clicar*.
+- **Barra do modo apontar** (champs-frontend ≥ 1.13.3): fica no rodapé; com Ctrl/Cmd e o ponteiro sobre ela, troca
+  de lado para liberar o que estiver embaixo.
 - **Testar como… / Apontar como…**: com `admin.switch_user_parameter` (ex.: `_switch_user`) e
   `monitoring.user_class`, a tela abre personificando um usuário escolhido entre os que **podem ver o
   tour** (`/onboarding/admin/tours/{id}/usuarios?q=`). É o caminho para telas que o admin não acessa.
