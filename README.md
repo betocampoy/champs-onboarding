@@ -353,8 +353,8 @@ champs_onboarding:
 - **Item de menu suspenso** (dropdown do Bootstrap, ex.: menu do usuário): basta a âncora do item; se o menu estiver
   fechado, o tour abre sozinho (champs-frontend ≥ 1.13.3). Cada passo reabre o menu, já que o clique no "Próximo"
   o fecha. Para ensinar o usuário a abrir o menu, use antes um passo no botão do menu com *Avança ao clicar*.
-- **Barra do modo apontar** (champs-frontend ≥ 1.13.3): fica no rodapé; com Ctrl/Cmd e o ponteiro sobre ela, troca
-  de lado para liberar o que estiver embaixo.
+- **Barra do modo apontar** (champs-frontend ≥ 1.13.4): fica no topo e empurra a tela para baixo (inclusive menus
+  fixos), sem cobrir nenhum elemento.
 - **Testar como… / Apontar como…**: com `admin.switch_user_parameter` (ex.: `_switch_user`) e
   `monitoring.user_class`, a tela abre personificando um usuário escolhido entre os que **podem ver o
   tour** (`/onboarding/admin/tours/{id}/usuarios?q=`). É o caminho para telas que o admin não acessa.
