@@ -28,6 +28,9 @@ admin:
     mandatory: 'Mandatory'
     monitored: 'Monitored'
     completion_help: 'Completed over those who opened the tour'
+    audience: 'Who can see'
+    audience_any: 'Who can see: any'
+    audience_all: 'Everyone'
   tour:
     new_title: 'New tour'
     edit_title: 'Edit tour'

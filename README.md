@@ -313,7 +313,7 @@ Textos traduzidos, atributos e eventos: ver o README do `champs-core-js` (seçã
 ## Cadastro de tours (admin)
 
 Telas em `/onboarding/admin/tours` (prefixo do import de rotas), só para `admin_role`:
-lista com busca e números de uso, cadastro do tour, passos (criar, editar, subir/descer, excluir)
+lista com busca, filtro e coluna "quem pode ver" (`required_attribute`; "Todos" = sem restrição, desde 0.7) e números de uso, cadastro do tour, passos (criar, editar, subir/descer, excluir)
 e **Testar tour** (modo teste do `Onboarding.js`: nada é gravado, funciona com tour inativo).
 
 ```yaml

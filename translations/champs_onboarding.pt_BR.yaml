@@ -28,6 +28,9 @@ admin:
     mandatory: 'Obrigatório'
     monitored: 'Monitorado'
     completion_help: 'Concluídos sobre quem abriu o tour'
+    audience: 'Quem pode ver'
+    audience_any: 'Quem pode ver: qualquer'
+    audience_all: 'Todos'
   tour:
     new_title: 'Novo tour'
     edit_title: 'Editar tour'

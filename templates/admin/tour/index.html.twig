@@ -11,10 +11,17 @@
     </a>
 </div>
 
-<form method="get" class="d-flex gap-2 mb-3" style="max-width: 520px;">
-    <input type="search" name="q" value="{{ q }}" class="form-control form-control-sm" placeholder="{{ 'admin.search'|trans }}">
+<form method="get" class="d-flex flex-wrap gap-2 mb-3" style="max-width: 760px;">
+    <input type="search" name="q" value="{{ q }}" class="form-control form-control-sm" style="flex: 1 1 220px;" placeholder="{{ 'admin.search'|trans }}">
+    <select name="audience" class="form-select form-select-sm" style="flex: 0 1 240px;" aria-label="{{ 'admin.list.audience'|trans }}" onchange="this.form.requestSubmit()">
+        <option value="">{{ 'admin.list.audience_any'|trans }}</option>
+        <option value="{{ audience_all }}" {{ audience == audience_all ? 'selected' }}>{{ 'admin.list.audience_all'|trans }}</option>
+        {% for item in audiences %}
+            <option value="{{ item }}" {{ audience == item ? 'selected' }}>{{ item }}</option>
+        {% endfor %}
+    </select>
     <button type="submit" class="btn btn-sm btn-outline-primary">{{ 'admin.filter'|trans }}</button>
-    {% if q %}<a href="{{ path('champs_onboarding_admin_tour_index') }}" class="btn btn-sm btn-outline-secondary">{{ 'admin.clear'|trans }}</a>{% endif %}
+    {% if q or audience %}<a href="{{ path('champs_onboarding_admin_tour_index') }}" class="btn btn-sm btn-outline-secondary">{{ 'admin.clear'|trans }}</a>{% endif %}
 </form>
 
 <div class="card">
@@ -24,6 +31,7 @@
                 <tr>
                     <th>{{ 'admin.list.name'|trans }}</th>
                     <th>{{ 'admin.list.route'|trans }}</th>
+                    <th>{{ 'admin.list.audience'|trans }}</th>
                     <th>{{ 'admin.list.trigger'|trans }}</th>
                     <th class="text-center">{{ 'admin.list.steps'|trans }}</th>
                     <th class="text-center">{{ 'admin.list.started'|trans }}</th>
@@ -41,6 +49,9 @@
                         <div class="small text-body-secondary"><code>{{ tour.slug }}</code></div>
                     </td>
                     <td class="small"><code>{{ tour.startRoute }}</code></td>
+                    <td class="small">
+                        {% if tour.requiredAttribute %}<code>{{ tour.requiredAttribute }}</code>{% else %}<span class="text-body-secondary">{{ 'admin.list.audience_all'|trans }}</span>{% endif %}
+                    </td>
                     <td class="small">
                         {{ ('admin.trigger.' ~ tour.trigger.value)|trans }}
                         {% if tour.conditional %}<div class="text-body-secondary" title="{{ 'admin.tour.condition_anchor'|trans }}"><i class="bi bi-funnel"></i> <code>{{ tour.conditionAnchor }}</code></div>{% endif %}
@@ -65,7 +76,7 @@
                     </td>
                 </tr>
             {% else %}
-                <tr><td colspan="8" class="text-body-secondary text-center py-4">{{ 'admin.list.empty'|trans }}</td></tr>
+                <tr><td colspan="9" class="text-body-secondary text-center py-4">{{ 'admin.list.empty'|trans }}</td></tr>
             {% endfor %}
             </tbody>
         </table>

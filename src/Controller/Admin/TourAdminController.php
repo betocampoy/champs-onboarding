@@ -40,6 +40,9 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 #[Route('/admin/tours')]
 final class TourAdminController extends AbstractController
 {
+    /** Valor do filtro "quem pode ver" para os tours sem restrição (todos os usuários). */
+    private const AUDIENCE_ALL = '_all';
+
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly TourRepository $tours,
@@ -90,15 +93,40 @@ final class TourAdminController extends AbstractController
         $this->denyAccessUnlessGranted($this->adminRole);
 
         $q = mb_strtolower(trim((string) $request->query->get('q', '')));
+        // "quem pode ver": uma role/atributo exato, ou self::AUDIENCE_ALL para os tours sem restrição
+        $audience = trim((string) $request->query->get('audience', ''));
+        $overview = $this->stats->overview();
+
+        $audiences = [];
+        foreach ($overview as $row) {
+            $attribute = $row['tour']->getRequiredAttribute();
+            if ($attribute !== null && $attribute !== '') {
+                $audiences[$attribute] = true;
+            }
+        }
+        $audiences = array_keys($audiences);
+        sort($audiences);
+
         $rows = array_values(array_filter(
-            $this->stats->overview(),
-            static fn (array $row) => $q === ''
+            $overview,
+            static fn (array $row) => ($q === ''
                 || str_contains(mb_strtolower($row['tour']->getName()), $q)
                 || str_contains($row['tour']->getSlug(), $q)
-                || str_contains($row['tour']->getStartRoute(), $q),
+                || str_contains($row['tour']->getStartRoute(), $q))
+                && match ($audience) {
+                    '' => true,
+                    self::AUDIENCE_ALL => in_array($row['tour']->getRequiredAttribute(), [null, ''], true),
+                    default => $row['tour']->getRequiredAttribute() === $audience,
+                },
         ));
 
-        return $this->renderAdmin('@ChampsOnboarding/admin/tour/index.html.twig', ['rows' => $rows, 'q' => $q]);
+        return $this->renderAdmin('@ChampsOnboarding/admin/tour/index.html.twig', [
+            'rows' => $rows,
+            'q' => $q,
+            'audience' => $audience,
+            'audiences' => $audiences,
+            'audience_all' => self::AUDIENCE_ALL,
+        ]);
     }
 
     #[Route('/novo', name: 'champs_onboarding_admin_tour_new', methods: ['GET', 'POST'])]
